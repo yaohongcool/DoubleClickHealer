@@ -1,43 +1,64 @@
 using System.Drawing;
-using System.Windows.Forms;
+using Forms = System.Windows.Forms;
 
 namespace DoubleClickHealer.App.Services;
 
+/// <summary>
+/// 托盘图标与弹出菜单。左键单击显示主界面，右键弹出 Win11 风格菜单。
+/// </summary>
 public sealed class TrayService : IDisposable
 {
-    private readonly NotifyIcon _icon;
-    private readonly ToolStripMenuItem _toggleItem;
+    private readonly Forms.NotifyIcon _icon;
+    private readonly Action _show;
+    private readonly Action _exit;
+    private readonly Func<bool> _isEnabled;
+    private readonly Action<bool> _setEnabled;
+
+    private TrayMenuWindow? _menu;
 
     public TrayService(Action show, Action exit, Func<bool> isEnabled, Action<bool> setEnabled)
     {
-        _icon = new NotifyIcon
+        _show = show;
+        _exit = exit;
+        _isEnabled = isEnabled;
+        _setEnabled = setEnabled;
+
+        _icon = new Forms.NotifyIcon
         {
             Icon = LoadIcon(),
             Visible = true,
             Text = "双击修复器",
         };
 
-        var menu = new ContextMenuStrip();
+        _icon.MouseClick += (_, e) =>
+        {
+            if (e.Button == Forms.MouseButtons.Left) _show();
+            else if (e.Button == Forms.MouseButtons.Right) ShowMenu();
+        };
+    }
 
-        var showItem = new ToolStripMenuItem("显示主界面");
-        showItem.Click += (_, _) => show();
+    private void ShowMenu()
+    {
+        if (_menu != null)
+        {
+            _menu.Close();
+            _menu = null;
+            return;
+        }
 
-        var toggleItem = new ToolStripMenuItem("暂停修复");
-        toggleItem.Click += (_, _) => setEnabled(!isEnabled());
-        _toggleItem = toggleItem;
+        var items = new List<(string, Action?)>
+        {
+            ("显示主界面", _show),
+            (_isEnabled() ? "暂停修复" : "启用修复", () => _setEnabled(!_isEnabled())),
+            (string.Empty, null),
+            ("退出", _exit),
+        };
 
-        var exitItem = new ToolStripMenuItem("退出");
-        exitItem.Click += (_, _) => exit();
+        _menu = new TrayMenuWindow(items);
+        _menu.Closed += (_, _) => _menu = null;
 
-        menu.Opening += (_, _) => toggleItem.Text = isEnabled() ? "暂停修复" : "启用修复";
-
-        menu.Items.Add(showItem);
-        menu.Items.Add(toggleItem);
-        menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add(exitItem);
-
-        _icon.ContextMenuStrip = menu;
-        _icon.DoubleClick += (_, _) => show();
+        Point cursor = Forms.Cursor.Position;
+        _menu.ShowAt(cursor.X, cursor.Y);
     }
 
     private static Icon LoadIcon()
@@ -57,6 +78,8 @@ public sealed class TrayService : IDisposable
 
     public void Dispose()
     {
+        _menu?.Close();
+        _menu = null;
         _icon.Visible = false;
         _icon.Dispose();
     }

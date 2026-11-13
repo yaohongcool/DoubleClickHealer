@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>DoubleClickHealer.Core</RootNamespace>
+    <AssemblyName>DoubleClickHealer.Core</AssemblyName>
+  </PropertyGroup>
+
+</Project>

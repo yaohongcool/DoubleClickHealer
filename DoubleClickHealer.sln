@@ -1,0 +1,59 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{04AB6CB7-348A-4084-BC58-45613C36BA01}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoubleClickHealer.Core", "src\DoubleClickHealer.Core\DoubleClickHealer.Core.csproj", "{F2ACF939-448E-435E-9E17-395430997366}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{D330347D-A6B4-4F0C-B779-7E65A9B03184}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoubleClickHealer.PoC", "tools\DoubleClickHealer.PoC\DoubleClickHealer.PoC.csproj", "{A61AE943-9077-4518-8C6B-ED962403A04F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{94986FEB-078A-4426-A3B5-44270D127D03}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoubleClickHealer.Core.Tests", "tests\DoubleClickHealer.Core.Tests\DoubleClickHealer.Core.Tests.csproj", "{2E206053-249B-41E3-A7DF-9A48310CECE9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoubleClickHealer.Simulator", "tools\DoubleClickHealer.Simulator\DoubleClickHealer.Simulator.csproj", "{F4023631-B3F7-443E-8AC0-3AD8C448B5B3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DoubleClickHealer.App", "src\DoubleClickHealer.App\DoubleClickHealer.App.csproj", "{D7BAAB13-A26C-4847-AF09-BDAF1E73B63B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F2ACF939-448E-435E-9E17-395430997366}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2ACF939-448E-435E-9E17-395430997366}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2ACF939-448E-435E-9E17-395430997366}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2ACF939-448E-435E-9E17-395430997366}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A61AE943-9077-4518-8C6B-ED962403A04F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A61AE943-9077-4518-8C6B-ED962403A04F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A61AE943-9077-4518-8C6B-ED962403A04F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A61AE943-9077-4518-8C6B-ED962403A04F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E206053-249B-41E3-A7DF-9A48310CECE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E206053-249B-41E3-A7DF-9A48310CECE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E206053-249B-41E3-A7DF-9A48310CECE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E206053-249B-41E3-A7DF-9A48310CECE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F4023631-B3F7-443E-8AC0-3AD8C448B5B3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4023631-B3F7-443E-8AC0-3AD8C448B5B3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4023631-B3F7-443E-8AC0-3AD8C448B5B3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4023631-B3F7-443E-8AC0-3AD8C448B5B3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7BAAB13-A26C-4847-AF09-BDAF1E73B63B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7BAAB13-A26C-4847-AF09-BDAF1E73B63B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7BAAB13-A26C-4847-AF09-BDAF1E73B63B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7BAAB13-A26C-4847-AF09-BDAF1E73B63B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{F2ACF939-448E-435E-9E17-395430997366} = {04AB6CB7-348A-4084-BC58-45613C36BA01}
+		{A61AE943-9077-4518-8C6B-ED962403A04F} = {D330347D-A6B4-4F0C-B779-7E65A9B03184}
+		{2E206053-249B-41E3-A7DF-9A48310CECE9} = {94986FEB-078A-4426-A3B5-44270D127D03}
+		{F4023631-B3F7-443E-8AC0-3AD8C448B5B3} = {D330347D-A6B4-4F0C-B779-7E65A9B03184}
+		{D7BAAB13-A26C-4847-AF09-BDAF1E73B63B} = {04AB6CB7-348A-4084-BC58-45613C36BA01}
+	EndGlobalSection
+EndGlobal

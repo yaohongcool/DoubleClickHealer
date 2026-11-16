@@ -22,9 +22,57 @@ public sealed class ConfigStoreTests : IDisposable
         using var store = new ConfigStore(_path);
 
         Assert.True(store.Current.Enabled);
+        Assert.True(store.Current.RunAtStartup);
         Assert.True(store.Current.StartMinimized);
-        Assert.Equal(3, store.Current.Targets.Count);
+        Assert.Equal(2, store.Current.Targets.Count);
         Assert.All(store.Current.Targets, rule => Assert.Equal(InputKind.Mouse, rule.Kind));
+        Assert.All(store.Current.Targets, rule => Assert.Equal(80, rule.HoldMs));
+    }
+
+    [Fact]
+    public void LegacyDefaultConfig_MigratesToNewDefaults()
+    {
+        File.WriteAllText(_path, """
+            {
+              "version": 1,
+              "runAtStartup": false,
+              "targets": [
+                { "kind": "Mouse", "code": 1, "holdMs": 40 },
+                { "kind": "Mouse", "code": 2, "holdMs": 40 },
+                { "kind": "Mouse", "code": 4, "holdMs": 40 }
+              ]
+            }
+            """);
+
+        using var store = new ConfigStore(_path);
+
+        Assert.Equal(2, store.Current.Version);
+        Assert.True(store.Current.RunAtStartup);
+        Assert.Equal(2, store.Current.Targets.Count);
+        Assert.All(store.Current.Targets, rule => Assert.Equal(80, rule.HoldMs));
+    }
+
+    [Fact]
+    public void CustomConfig_OnlyBumpsVersion()
+    {
+        File.WriteAllText(_path, """
+            {
+              "version": 1,
+              "runAtStartup": false,
+              "targets": [
+                { "kind": "Mouse", "code": 1, "holdMs": 35 },
+                { "kind": "Keyboard", "code": 65, "holdMs": 0 }
+              ]
+            }
+            """);
+
+        using var store = new ConfigStore(_path);
+
+        Assert.Equal(2, store.Current.Version);
+        Assert.False(store.Current.RunAtStartup);
+        Assert.Equal(2, store.Current.Targets.Count);
+        Assert.Equal(35, store.Current.Targets[0].HoldMs);
+        Assert.Equal(InputKind.Keyboard, store.Current.Targets[1].Kind);
     }
 
     [Fact]

@@ -15,6 +15,7 @@ public sealed class TrayService : IDisposable
     private readonly Action<bool> _setEnabled;
 
     private TrayMenuWindow? _menu;
+    private bool _disposed;
 
     public TrayService(Action show, Action exit, Func<bool> isEnabled, Action<bool> setEnabled)
     {
@@ -49,7 +50,7 @@ public sealed class TrayService : IDisposable
         var items = new List<(string, Action?)>
         {
             ("显示主界面", _show),
-            (_isEnabled() ? "暂停修复" : "启用修复", () => _setEnabled(!_isEnabled())),
+            (_isEnabled() ? "停用" : "开启", () => _setEnabled(!_isEnabled())),
             (string.Empty, null),
             ("退出", _exit),
         };
@@ -78,6 +79,9 @@ public sealed class TrayService : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         _menu?.Close();
         _menu = null;
         _icon.Visible = false;

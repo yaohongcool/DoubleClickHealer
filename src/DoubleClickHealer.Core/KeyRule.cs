@@ -22,7 +22,7 @@ public sealed record KeyRule
     public bool Enabled { get; init; } = true;
 
     /// <summary>扣留 UP 的时长，0 表示轻量模式（不扣留，仅丢弃重复 DOWN）。</summary>
-    public int HoldMs { get; init; } = 40;
+    public int HoldMs { get; init; } = 80;
 
     /// <summary>两个事件间隔小于此值直接判为抖动。</summary>
     public int ChatterGapMs { get; init; } = 20;
@@ -33,14 +33,14 @@ public sealed record KeyRule
     /// <summary>上次是碎片按时，放宽到该间隔内仍判为抖动。</summary>
     public int ChatterGapLongMs { get; init; } = 60;
 
-    public static KeyRule Mouse(int button, int holdMs = 40) => new()
+    public static KeyRule Mouse(int button, int holdMs = 80) => new()
     {
         Kind = InputKind.Mouse,
         Code = button,
         HoldMs = holdMs,
     };
 
-    public static KeyRule Keyboard(int virtualKey, int holdMs = 0) => new()
+    public static KeyRule Keyboard(int virtualKey, int holdMs = 80) => new()
     {
         Kind = InputKind.Keyboard,
         Code = virtualKey,

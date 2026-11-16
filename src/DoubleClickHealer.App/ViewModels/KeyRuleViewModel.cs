@@ -26,7 +26,6 @@ public sealed class KeyRuleViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _enabled, value)) return;
-            OnPropertyChanged(nameof(Subtitle));
             Changed?.Invoke();
         }
     }
@@ -38,17 +37,10 @@ public sealed class KeyRuleViewModel : ObservableObject
         {
             int clamped = Math.Clamp(value, 0, 120);
             if (!SetProperty(ref _holdMs, clamped)) return;
-            OnPropertyChanged(nameof(Subtitle));
             OnPropertyChanged(nameof(HoldText));
             Changed?.Invoke();
         }
     }
-
-    public string Subtitle => !_enabled
-        ? "已停用"
-        : _holdMs == 0
-            ? "轻量防抖 · 零延迟"
-            : $"深度防抖 · 扣留 {_holdMs}ms";
 
     public string HoldText => _holdMs == 0 ? "轻量" : $"{_holdMs} ms";
 

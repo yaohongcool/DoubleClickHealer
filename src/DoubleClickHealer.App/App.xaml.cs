@@ -39,6 +39,7 @@ public partial class App : Application
 
         _store = new ConfigStore();
         _store.EnsureFile();
+        _store.Save(_store.Current); // 迁移后的配置立即落盘
         _store.StartWatching();
 
         try
@@ -67,6 +68,7 @@ public partial class App : Application
 
         _viewModel = new MainViewModel(_store, _engine);
         _window = new MainWindow(_viewModel);
+        _window.Closed += (_, _) => _window = null;
 
         _singleInstance.Listen(() => Dispatcher.BeginInvoke(ShowMainWindow));
 
@@ -85,7 +87,9 @@ public partial class App : Application
         if (hookFailed)
             _viewModel.ReportStatus("全局钩子安装失败，修复未生效");
 
-        bool startHidden = !firstRun && (e.Args.Contains("--minimized") || _store.Current.StartMinimized);
+        // 由开机自启拉起时始终隐藏窗口，与是否首次运行无关。
+        bool launchedAtStartup = e.Args.Contains("--minimized");
+        bool startHidden = launchedAtStartup || (!firstRun && _store.Current.StartMinimized);
         if (!startHidden) ShowMainWindow();
     }
 
@@ -94,7 +98,13 @@ public partial class App : Application
 
     private void ShowMainWindow()
     {
-        if (_window == null) return;
+        if (_exiting || _viewModel == null) return;
+
+        if (_window == null)
+        {
+            _window = new MainWindow(_viewModel);
+            _window.Closed += (_, _) => _window = null;
+        }
 
         _window.Show();
         _window.WindowState = WindowState.Normal;
@@ -112,7 +122,6 @@ public partial class App : Application
         _store?.Dispose();
         _tray?.Dispose();
         _singleInstance?.Dispose();
-        _window?.Close();
 
         Shutdown();
     }

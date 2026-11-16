@@ -125,10 +125,10 @@ public sealed class ConfigStore : IDisposable
             if (json == _lastSavedJson) return; // 自己刚写入的内容，无需重载。
         }
 
-        AppConfig? config;
+        AppConfig? parsed;
         try
         {
-            config = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions);
+            parsed = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions);
         }
         catch (JsonException ex)
         {
@@ -136,7 +136,9 @@ public sealed class ConfigStore : IDisposable
             return;
         }
 
-        if (config == null) return;
+        if (parsed == null) return;
+
+        AppConfig config = AppConfig.Migrate(parsed);
 
         lock (_gate)
         {
@@ -154,7 +156,8 @@ public sealed class ConfigStore : IDisposable
         {
             if (!File.Exists(_path)) return new AppConfig();
             string json = File.ReadAllText(_path);
-            return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+            var parsed = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+            return AppConfig.Migrate(parsed);
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {

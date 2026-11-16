@@ -26,6 +26,11 @@
     <SolidColorBrush x:Key="TextTertiaryBrush" Color="{StaticResource TextTertiaryColor}" />
     <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
     <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+    <SolidColorBrush x:Key="AccentHoverBrush" Color="{StaticResource AccentHoverColor}" />
+    <SolidColorBrush x:Key="AccentPressedBrush" Color="{StaticResource AccentPressedColor}" />
+    <SolidColorBrush x:Key="ControlFillBrush" Color="{StaticResource ControlFillColor}" />
+    <SolidColorBrush x:Key="ControlHoverBrush" Color="{StaticResource ControlHoverColor}" />
+    <SolidColorBrush x:Key="ControlPressedBrush" Color="{StaticResource ControlPressedColor}" />
     <SolidColorBrush x:Key="StrokeBrush" Color="{StaticResource StrokeColor}" />
     <SolidColorBrush x:Key="StrokeSubtleBrush" Color="{StaticResource StrokeSubtleColor}" />
     <SolidColorBrush x:Key="ToggleOffBrush" Color="{StaticResource ToggleOffColor}" />
@@ -43,6 +48,45 @@
         <Setter Property="Padding" Value="16,14" />
         <Setter Property="BorderBrush" Value="{StaticResource StrokeSubtleBrush}" />
         <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <Style x:Key="NumberBoxStyle" TargetType="TextBox">
+        <Setter Property="Height" Value="28" />
+        <Setter Property="Width" Value="54" />
+        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextAlignment" Value="Right" />
+        <Setter Property="VerticalContentAlignment" Value="Center" />
+        <Setter Property="Padding" Value="4,0" />
+        <Setter Property="Background" Value="{StaticResource CardBrush}" />
+        <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+        <Setter Property="CaretBrush" Value="{StaticResource AccentBrush}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TextBox">
+                    <Border x:Name="Root"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+                        <ScrollViewer x:Name="PART_ContentHost"
+                                      Margin="{TemplateBinding Padding}"
+                                      VerticalAlignment="Center"
+                                      Foreground="{TemplateBinding Foreground}" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="#D6D6D6" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     <!-- Win11 ToggleSwitch: 40x20 track, 12px thumb -->
@@ -190,7 +234,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
                     <Border x:Name="Root"
-                            Background="{StaticResource ControlFillColor}"
+                            Background="{StaticResource ControlFillBrush}"
                             BorderBrush="{StaticResource StrokeBrush}"
                             BorderThickness="1"
                             CornerRadius="4">
@@ -198,10 +242,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlHoverColor}" />
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlHoverBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlPressedColor}" />
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlPressedBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="0.45" />
@@ -228,10 +272,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AccentHoverColor}" />
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AccentHoverBrush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AccentPressedColor}" />
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource AccentPressedBrush}" />
                         </Trigger>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter TargetName="Root" Property="Opacity" Value="0.45" />
@@ -309,7 +353,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlHoverColor}" />
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource ControlHoverBrush}" />
                             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>

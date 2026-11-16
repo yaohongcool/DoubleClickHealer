@@ -11,6 +11,7 @@ public sealed class SingleInstance : IDisposable
     private readonly Mutex _mutex;
     private readonly CancellationTokenSource _cancellation = new();
     private Thread? _listener;
+    private bool _disposed;
 
     public SingleInstance()
     {
@@ -71,6 +72,9 @@ public sealed class SingleInstance : IDisposable
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         _cancellation.Cancel();
 
         try

@@ -50,12 +50,9 @@ public sealed class MainViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _enabled, value)) return;
-            OnPropertyChanged(nameof(EnabledHint));
             ScheduleSave();
         }
     }
-
-    public string EnabledHint => _enabled ? "正在监控所选按键" : "已暂停，所有按键直接透传";
 
     public bool RunAtStartup
     {
@@ -121,7 +118,6 @@ public sealed class MainViewModel : ObservableObject
         _runAtStartup = config.RunAtStartup;
         _elevatedMode = config.ElevatedMode;
         OnPropertyChanged(nameof(Enabled));
-        OnPropertyChanged(nameof(EnabledHint));
         OnPropertyChanged(nameof(RunAtStartup));
         OnPropertyChanged(nameof(ElevatedMode));
 
@@ -175,8 +171,8 @@ public sealed class MainViewModel : ObservableObject
         }
 
         KeyRule rule = kind == InputKind.Mouse
-            ? KeyRule.Mouse(code, 40)
-            : KeyRule.Keyboard(code, 0);
+            ? KeyRule.Mouse(code, 80)
+            : KeyRule.Keyboard(code, 80);
 
         var viewModel = new KeyRuleViewModel(rule);
         viewModel.Changed += ScheduleSave;

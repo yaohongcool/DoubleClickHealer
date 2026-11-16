@@ -2,12 +2,12 @@ namespace DoubleClickHealer.Core.Config;
 
 public sealed record AppConfig
 {
-    public int Version { get; init; } = 1;
+    public int Version { get; init; } = 2;
 
     /// <summary>软件总开关。</summary>
     public bool Enabled { get; init; } = true;
 
-    public bool RunAtStartup { get; init; }
+    public bool RunAtStartup { get; init; } = true;
     public bool StartMinimized { get; init; } = true;
     public bool MinimizeToTray { get; init; } = true;
 
@@ -18,8 +18,29 @@ public sealed record AppConfig
 
     public static List<KeyRule> DefaultTargets() =>
     [
-        KeyRule.Mouse(MouseButtons.Left, 40),
-        KeyRule.Mouse(MouseButtons.Right, 40),
-        KeyRule.Mouse(MouseButtons.Middle, 40),
+        KeyRule.Mouse(MouseButtons.Left, 80),
+        KeyRule.Mouse(MouseButtons.Right, 80),
     ];
+
+    /// <summary>
+    /// v1 的默认目标是左/右/中键、40ms；升级到 v2 时把纯默认配置替换为新默认，
+    /// 用户自定义过的配置只升级版本号。
+    /// </summary>
+    public static AppConfig Migrate(AppConfig config)
+    {
+        if (config.Version >= 2) return config;
+
+        bool isLegacyDefault = config.Targets.Count == 3
+            && config.Targets.All(rule => rule.Kind == InputKind.Mouse && rule.HoldMs == 40)
+            && config.Targets
+                .Select(rule => rule.Code)
+                .OrderBy(code => code)
+                .SequenceEqual([MouseButtons.Left, MouseButtons.Right, MouseButtons.Middle]);
+
+        var migrated = config with { Version = 2 };
+
+        return isLegacyDefault
+            ? migrated with { Targets = DefaultTargets(), RunAtStartup = true }
+            : migrated;
+    }
 }

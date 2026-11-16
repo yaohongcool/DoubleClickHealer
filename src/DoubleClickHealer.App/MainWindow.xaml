@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
         Title="双击修复器"
-        Width="640" Height="880"
+        Width="540" Height="480"
         WindowStyle="None"
         AllowsTransparency="False"
         Background="{StaticResource BackgroundBrush}"
@@ -59,41 +59,39 @@
         </Grid>
 
         <!-- Master switch -->
-        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="24,0,24,8">
-            <Grid Margin="0,2">
-                <StackPanel>
-                    <TextBlock Text="防抖修复" FontSize="14" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding EnabledHint}" FontSize="12"
-                               Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
-                </StackPanel>
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="20,0,20,6" Padding="14,10">
+            <Grid>
+                <TextBlock Text="开启" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
                 <ToggleButton Style="{StaticResource ToggleSwitchStyle}"
                               IsChecked="{Binding Enabled}"
                               HorizontalAlignment="Right" VerticalAlignment="Center" />
             </Grid>
         </Border>
 
-        <!-- Startup / elevation -->
-        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Margin="24,0,24,8">
+        <!-- System settings -->
+        <Border Grid.Row="2" Margin="20,0,20,6" Padding="14,10">
+            <Border.Style>
+                <Style TargetType="Border" BasedOn="{StaticResource CardStyle}">
+                    <Setter Property="IsEnabled" Value="{Binding Enabled}" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Enabled}" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
             <StackPanel>
-                <Grid Margin="0,2">
-                    <StackPanel>
-                        <TextBlock Text="开机自启" FontSize="14" FontWeight="SemiBold" />
-                        <TextBlock Text="登录后自动在后台运行" FontSize="12"
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
-                    </StackPanel>
+                <Grid>
+                    <TextBlock Text="开机自启" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <ToggleButton Style="{StaticResource ToggleSwitchStyle}"
                                   IsChecked="{Binding RunAtStartup}"
                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
                 </Grid>
 
-                <Border Height="1" Background="{StaticResource StrokeSubtleBrush}" Margin="0,10" />
+                <Border Height="1" Background="{StaticResource StrokeSubtleBrush}" Margin="0,8" />
 
-                <Grid Margin="0,2">
-                    <StackPanel>
-                        <TextBlock Text="增强模式" FontSize="14" FontWeight="SemiBold" />
-                        <TextBlock Text="以管理员身份运行，覆盖管理员程序" FontSize="12"
-                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,2,0,0" />
-                    </StackPanel>
+                <Grid>
+                    <TextBlock Text="增强模式" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
                     <ToggleButton Style="{StaticResource ToggleSwitchStyle}"
                                   IsChecked="{Binding ElevatedMode}"
                                   HorizontalAlignment="Right" VerticalAlignment="Center" />
@@ -102,7 +100,17 @@
         </Border>
 
         <!-- Key list -->
-        <ScrollViewer Grid.Row="3" Margin="24,0,24,0" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="3" Margin="20,0,20,0" VerticalScrollBarVisibility="Auto">
+            <ScrollViewer.Style>
+                <Style TargetType="ScrollViewer">
+                    <Setter Property="IsEnabled" Value="{Binding Enabled}" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Enabled}" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ScrollViewer.Style>
             <ScrollViewer.Resources>
                 <Style TargetType="ScrollBar" BasedOn="{StaticResource MinimalScrollBarStyle}" />
             </ScrollViewer.Resources>
@@ -110,52 +118,38 @@
             <ItemsControl ItemsSource="{Binding Rules}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,8">
+                        <Border Style="{StaticResource CardStyle}" Padding="14,10" Margin="0,0,0,6">
                             <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
 
-                                <Grid Grid.Row="0">
-                                    <StackPanel>
-                                        <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" />
-                                        <TextBlock Text="{Binding Subtitle}" FontSize="12"
-                                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                                   Margin="0,2,0,0" />
-                                    </StackPanel>
+                                <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="14"
+                                           FontWeight="SemiBold" VerticalAlignment="Center" />
 
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
-                                                VerticalAlignment="Center">
-                                        <Button Style="{StaticResource GhostButtonStyle}"
-                                                Content="&#xE74D;"
-                                                ToolTip="移除"
-                                                Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                CommandParameter="{Binding}" />
-                                        <ToggleButton Style="{StaticResource ToggleSwitchStyle}"
-                                                      IsChecked="{Binding Enabled}"
-                                                      Margin="8,0,0,0" />
-                                    </StackPanel>
-                                </Grid>
-
-                                <Grid Grid.Row="1" Margin="0,12,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-
-                                    <Slider Grid.Column="0"
-                                            Style="{StaticResource Win11SliderStyle}"
-                                            Minimum="0" Maximum="120"
-                                            TickFrequency="1" IsSnapToTickEnabled="True"
-                                            VerticalAlignment="Center"
-                                            Value="{Binding HoldMs}" />
-
-                                    <TextBlock Grid.Column="1" Text="{Binding HoldText}" FontSize="12"
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBox Style="{StaticResource NumberBoxStyle}"
+                                             Text="{Binding HoldMs, UpdateSourceTrigger=LostFocus}"
+                                             PreviewTextInput="NumberBox_PreviewTextInput"
+                                             KeyDown="NumberBox_KeyDown" />
+                                    <TextBlock Text="ms" FontSize="11"
                                                Foreground="{StaticResource TextSecondaryBrush}"
-                                               Margin="12,0,0,0" MinWidth="52" TextAlignment="Right"
-                                               VerticalAlignment="Center" />
-                                </Grid>
+                                               Margin="5,0,0,0" VerticalAlignment="Center" />
+                                </StackPanel>
+
+                                <ToggleButton Grid.Column="2" Style="{StaticResource ToggleSwitchStyle}"
+                                              IsChecked="{Binding Enabled}"
+                                              Margin="10,0,0,0" VerticalAlignment="Center" />
+
+                                <Button Grid.Column="3" Style="{StaticResource GhostButtonStyle}"
+                                        Content="&#xE74D;"
+                                        ToolTip="移除"
+                                        Margin="8,0,0,0"
+                                        Command="{Binding DataContext.RemoveRuleCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}" />
                             </Grid>
                         </Border>
                     </DataTemplate>
@@ -164,19 +158,20 @@
         </ScrollViewer>
 
         <!-- Footer -->
-        <Grid Grid.Row="4" Margin="24,12,24,20">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
-
-            <Button Grid.Row="0" Style="{StaticResource AccentButtonStyle}"
+        <Grid Grid.Row="4" Margin="20,10,20,14">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="IsEnabled" Value="{Binding Enabled}" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Enabled}" Value="False">
+                            <Setter Property="Opacity" Value="0.45" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <Button Style="{StaticResource AccentButtonStyle}"
                     Content="{Binding AddButtonText}"
                     Command="{Binding AddRuleCommand}" />
-
-            <TextBlock Grid.Row="1" Text="{Binding StatusText}" FontSize="11"
-                       Foreground="{StaticResource TextSecondaryBrush}"
-                       HorizontalAlignment="Center" Margin="0,8,0,0" />
         </Grid>
     </Grid>
 </Window>

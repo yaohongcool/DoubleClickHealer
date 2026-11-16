@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Interop;
 using DoubleClickHealer.App.ViewModels;
 
@@ -38,6 +40,22 @@ public partial class MainWindow : Window
             int preference = DwmcpRound;
             DwmSetWindowAttribute(handle, DwmwaWindowCornerPreference, ref preference, sizeof(int));
         }
+    }
+
+    private void NumberBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
+    {
+        e.Handled = !e.Text.All(char.IsDigit);
+    }
+
+    private void NumberBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Enter) return;
+
+        if (sender is TextBox box)
+            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+
+        Keyboard.ClearFocus();
+        e.Handled = true;
     }
 
     private void Minimize_Click(object sender, RoutedEventArgs e) => Hide();

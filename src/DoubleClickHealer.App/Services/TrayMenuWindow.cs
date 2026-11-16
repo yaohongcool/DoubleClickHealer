@@ -16,6 +16,7 @@ public sealed class TrayMenuWindow : Window
 {
     private readonly DispatcherTimer _autoClose;
     private DateTime _shownAt;
+    private bool _actionInvoked;
 
     public TrayMenuWindow(IReadOnlyList<(string Text, Action? Action)> items)
     {
@@ -59,6 +60,7 @@ public sealed class TrayMenuWindow : Window
             Action handler = action;
             button.Click += (_, _) =>
             {
+                _actionInvoked = true;
                 Close();
                 handler();
             };
@@ -99,7 +101,12 @@ public sealed class TrayMenuWindow : Window
 
         // 激活过程中的瞬时失焦不应关闭菜单。
         if ((DateTime.UtcNow - _shownAt).TotalMilliseconds < 200) return;
-        Close();
+
+        // 失焦和菜单项点击可能同时发生，延后一轮再判断，避免抢先关闭。
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (!_actionInvoked) Close();
+        });
     }
 
     protected override void OnClosed(EventArgs e)

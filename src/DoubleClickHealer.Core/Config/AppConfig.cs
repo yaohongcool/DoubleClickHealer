@@ -2,7 +2,7 @@ namespace DoubleClickHealer.Core.Config;
 
 public sealed record AppConfig
 {
-    public int Version { get; init; } = 2;
+    public int Version { get; init; } = 3;
 
     /// <summary>软件总开关。</summary>
     public bool Enabled { get; init; } = true;
@@ -18,29 +18,50 @@ public sealed record AppConfig
 
     public static List<KeyRule> DefaultTargets() =>
     [
-        KeyRule.Mouse(MouseButtons.Left, 80),
-        KeyRule.Mouse(MouseButtons.Right, 80),
+        KeyRule.Mouse(MouseButtons.Left, 60),
+        KeyRule.Mouse(MouseButtons.Right, 60),
     ];
 
     /// <summary>
-    /// v1 的默认目标是左/右/中键、40ms；升级到 v2 时把纯默认配置替换为新默认，
-    /// 用户自定义过的配置只升级版本号。
+    /// 逐版本迁移纯默认配置；用户自定义过的配置只升级版本号，不覆盖。
+    /// v1: 左/右/中键 40ms
+    /// v2: 左/右键 80ms
+    /// v3: 左/右键 60ms
     /// </summary>
     public static AppConfig Migrate(AppConfig config)
     {
-        if (config.Version >= 2) return config;
+        if (config.Version >= 3) return config;
 
-        bool isLegacyDefault = config.Targets.Count == 3
-            && config.Targets.All(rule => rule.Kind == InputKind.Mouse && rule.HoldMs == 40)
-            && config.Targets
-                .Select(rule => rule.Code)
-                .OrderBy(code => code)
-                .SequenceEqual([MouseButtons.Left, MouseButtons.Right, MouseButtons.Middle]);
+        var migrated = config;
 
-        var migrated = config with { Version = 2 };
+        if (migrated.Version < 2)
+        {
+            bool isV1Default = migrated.Targets.Count == 3
+                && migrated.Targets.All(rule => rule.Kind == InputKind.Mouse && rule.HoldMs == 40)
+                && migrated.Targets
+                    .Select(rule => rule.Code)
+                    .OrderBy(code => code)
+                    .SequenceEqual([MouseButtons.Left, MouseButtons.Right, MouseButtons.Middle]);
 
-        return isLegacyDefault
-            ? migrated with { Targets = DefaultTargets(), RunAtStartup = true }
-            : migrated;
+            migrated = migrated with { Version = 2 };
+            if (isV1Default)
+                migrated = migrated with { Targets = DefaultTargets(), RunAtStartup = true };
+        }
+
+        if (migrated.Version < 3)
+        {
+            bool isV2Default = migrated.Targets.Count == 2
+                && migrated.Targets.All(rule => rule.Kind == InputKind.Mouse && rule.HoldMs == 80)
+                && migrated.Targets
+                    .Select(rule => rule.Code)
+                    .OrderBy(code => code)
+                    .SequenceEqual([MouseButtons.Left, MouseButtons.Right]);
+
+            migrated = migrated with { Version = 3 };
+            if (isV2Default)
+                migrated = migrated with { Targets = DefaultTargets() };
+        }
+
+        return migrated;
     }
 }

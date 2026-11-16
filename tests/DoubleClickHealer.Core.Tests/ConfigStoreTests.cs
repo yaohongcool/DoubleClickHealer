@@ -26,7 +26,7 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.True(store.Current.StartMinimized);
         Assert.Equal(2, store.Current.Targets.Count);
         Assert.All(store.Current.Targets, rule => Assert.Equal(InputKind.Mouse, rule.Kind));
-        Assert.All(store.Current.Targets, rule => Assert.Equal(80, rule.HoldMs));
+        Assert.All(store.Current.Targets, rule => Assert.Equal(60, rule.HoldMs));
     }
 
     [Fact]
@@ -46,10 +46,31 @@ public sealed class ConfigStoreTests : IDisposable
 
         using var store = new ConfigStore(_path);
 
-        Assert.Equal(2, store.Current.Version);
+        Assert.Equal(3, store.Current.Version);
         Assert.True(store.Current.RunAtStartup);
         Assert.Equal(2, store.Current.Targets.Count);
-        Assert.All(store.Current.Targets, rule => Assert.Equal(80, rule.HoldMs));
+        Assert.All(store.Current.Targets, rule => Assert.Equal(60, rule.HoldMs));
+    }
+
+    [Fact]
+    public void V2DefaultConfig_MigratesToSixtyMs()
+    {
+        File.WriteAllText(_path, """
+            {
+              "version": 2,
+              "runAtStartup": true,
+              "targets": [
+                { "kind": "Mouse", "code": 1, "holdMs": 80 },
+                { "kind": "Mouse", "code": 2, "holdMs": 80 }
+              ]
+            }
+            """);
+
+        using var store = new ConfigStore(_path);
+
+        Assert.Equal(3, store.Current.Version);
+        Assert.Equal(2, store.Current.Targets.Count);
+        Assert.All(store.Current.Targets, rule => Assert.Equal(60, rule.HoldMs));
     }
 
     [Fact]
@@ -68,7 +89,7 @@ public sealed class ConfigStoreTests : IDisposable
 
         using var store = new ConfigStore(_path);
 
-        Assert.Equal(2, store.Current.Version);
+        Assert.Equal(3, store.Current.Version);
         Assert.False(store.Current.RunAtStartup);
         Assert.Equal(2, store.Current.Targets.Count);
         Assert.Equal(35, store.Current.Targets[0].HoldMs);

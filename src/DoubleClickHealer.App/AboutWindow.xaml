@@ -1,0 +1,64 @@
+<Window x:Class="DoubleClickHealer.App.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        Title="关于"
+        Width="400" Height="340"
+        WindowStyle="None"
+        AllowsTransparency="False"
+        Background="{StaticResource BackgroundBrush}"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual"
+        ShowInTaskbar="False"
+        FontFamily="{StaticResource AppFont}"
+        Foreground="{StaticResource TextPrimaryBrush}"
+        TextOptions.TextFormattingMode="Ideal"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="40"
+                            ResizeBorderThickness="0"
+                            GlassFrameThickness="0"
+                            CornerRadius="0"
+                            UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid Background="{StaticResource BackgroundBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <TextBlock Text="关于" FontSize="12" Margin="16,0,0,0" VerticalAlignment="Center" />
+            <Button Style="{StaticResource CloseCaptionButtonStyle}"
+                    Content="&#xE8BB;"
+                    Click="Close_Click"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True" />
+        </Grid>
+
+        <StackPanel Grid.Row="1" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,8,0,0">
+            <Image Source="/Assets/app.ico" Width="72" Height="72" RenderOptions.BitmapScalingMode="HighQuality" />
+
+            <TextBlock Text="双击修复器" FontSize="18" FontWeight="SemiBold"
+                       HorizontalAlignment="Center" Margin="0,14,0,0" />
+
+            <TextBlock x:Name="VersionText" FontSize="12"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       HorizontalAlignment="Center" Margin="0,4,0,0" />
+
+            <TextBlock FontSize="12" HorizontalAlignment="Center" Margin="0,18,0,0">
+                <Hyperlink NavigateUri="https://github.com/yaohongcool/DoubleClickHealer"
+                           RequestNavigate="Link_RequestNavigate">
+                    github.com/yaohongcool/DoubleClickHealer
+                </Hyperlink>
+            </TextBlock>
+
+            <TextBlock Text="© 2026 DoubleClickHealer"
+                       FontSize="11" Foreground="{StaticResource TextTertiaryBrush}"
+                       HorizontalAlignment="Center" Margin="0,28,0,0" />
+        </StackPanel>
+    </Grid>
+</Window>

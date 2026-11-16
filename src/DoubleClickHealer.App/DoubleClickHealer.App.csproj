@@ -9,6 +9,7 @@
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <AssemblyName>DoubleClickHealer</AssemblyName>
     <RootNamespace>DoubleClickHealer.App</RootNamespace>
+    <Version>1.0.0</Version>
     <NoWarn>$(NoWarn);WFAC010</NoWarn>
   </PropertyGroup>
 

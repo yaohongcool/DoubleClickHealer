@@ -18,6 +18,7 @@ public partial class App : Application
     private InputHook? _hook;
     private TrayService? _tray;
     private MainWindow? _window;
+    private AboutWindow? _about;
     private MainViewModel? _viewModel;
     private bool _exiting;
 
@@ -75,6 +76,7 @@ public partial class App : Application
         _tray = new TrayService(
             show: ShowMainWindow,
             exit: ExitApplication,
+            about: ShowAbout,
             isEnabled: () => _store.Current.Enabled,
             setEnabled: enabled => _viewModel.Enabled = enabled);
 
@@ -109,6 +111,20 @@ public partial class App : Application
         _window.Show();
         _window.WindowState = WindowState.Normal;
         _window.Activate();
+    }
+
+    private void ShowAbout()
+    {
+        if (_about != null)
+        {
+            _about.Activate();
+            return;
+        }
+
+        var about = new AboutWindow();
+        _about = about;
+        about.Closed += (_, _) => _about = null;
+        about.ShowDialog();
     }
 
     private void ExitApplication()

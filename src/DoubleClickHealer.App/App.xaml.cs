@@ -76,9 +76,7 @@ public partial class App : Application
         _tray = new TrayService(
             show: ShowMainWindow,
             exit: ExitApplication,
-            about: ShowAbout,
-            isEnabled: () => _store.Current.Enabled,
-            setEnabled: enabled => _viewModel.Enabled = enabled);
+            about: ShowAbout);
 
         _store.Changed += config => Dispatcher.BeginInvoke(() =>
         {

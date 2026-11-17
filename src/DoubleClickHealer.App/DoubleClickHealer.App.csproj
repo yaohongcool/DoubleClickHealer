@@ -23,6 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="iNKORE.UI.WPF.Modern" Version="0.10.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\DoubleClickHealer.Core\DoubleClickHealer.Core.csproj" />
   </ItemGroup>
 

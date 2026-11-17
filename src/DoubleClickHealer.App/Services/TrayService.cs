@@ -12,19 +12,15 @@ public sealed class TrayService : IDisposable
     private readonly Action _show;
     private readonly Action _exit;
     private readonly Action _about;
-    private readonly Func<bool> _isEnabled;
-    private readonly Action<bool> _setEnabled;
 
     private TrayMenuWindow? _menu;
     private bool _disposed;
 
-    public TrayService(Action show, Action exit, Action about, Func<bool> isEnabled, Action<bool> setEnabled)
+    public TrayService(Action show, Action exit, Action about)
     {
         _show = show;
         _exit = exit;
         _about = about;
-        _isEnabled = isEnabled;
-        _setEnabled = setEnabled;
 
         _icon = new Forms.NotifyIcon
         {
@@ -51,8 +47,7 @@ public sealed class TrayService : IDisposable
 
         var items = new List<(string, Action?)>
         {
-            ("显示主界面", _show),
-            (_isEnabled() ? "停用" : "开启", () => _setEnabled(!_isEnabled())),
+            ("设置", _show),
             (string.Empty, null),
             ("关于", _about),
             ("退出", _exit),

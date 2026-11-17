@@ -20,6 +20,8 @@ public sealed class KeyRuleViewModel : ObservableObject
     public int Code { get; }
     public string Name { get; }
 
+    public bool IsMouse => Kind == InputKind.Mouse;
+
     public bool Enabled
     {
         get => _enabled;
@@ -27,6 +29,17 @@ public sealed class KeyRuleViewModel : ObservableObject
         {
             if (!SetProperty(ref _enabled, value)) return;
             Changed?.Invoke();
+        }
+    }
+
+    /// <summary>NumberBox.Value 是 double，用它包装 int 的 HoldMs。</summary>
+    public double HoldMsValue
+    {
+        get => _holdMs;
+        set
+        {
+            if (double.IsNaN(value)) return;
+            HoldMs = (int)Math.Round(value);
         }
     }
 
@@ -38,6 +51,7 @@ public sealed class KeyRuleViewModel : ObservableObject
             int clamped = Math.Clamp(value, 0, 120);
             if (!SetProperty(ref _holdMs, clamped)) return;
             OnPropertyChanged(nameof(HoldText));
+            OnPropertyChanged(nameof(HoldMsValue));
             Changed?.Invoke();
         }
     }

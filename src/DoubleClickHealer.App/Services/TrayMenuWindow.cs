@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
+using System.Windows.Shell;
 using System.Windows.Threading;
 
 namespace DoubleClickHealer.App.Services;
@@ -14,20 +15,42 @@ namespace DoubleClickHealer.App.Services;
 /// </summary>
 public sealed class TrayMenuWindow : Window
 {
+    private const int DwmwaWindowCornerPreference = 33;
+    private const int DwmwaSystemBackdropType = 38;
+    private const int DwmcpRound = 2;
+    private const int DwmsbtTransientWindow = 3;
+    private const int Windows11AcrylicBuild = 22621;
+
     private readonly DispatcherTimer _autoClose;
+    private readonly bool _useBackdrop;
     private DateTime _shownAt;
     private bool _actionInvoked;
 
     public TrayMenuWindow(IReadOnlyList<(string Text, Action? Action)> items)
     {
+        _useBackdrop = Environment.OSVersion.Version.Build >= Windows11AcrylicBuild;
+
         WindowStyle = WindowStyle.None;
-        AllowsTransparency = true;
+        AllowsTransparency = !_useBackdrop;
         Background = Brushes.Transparent;
         ShowInTaskbar = false;
         Topmost = true;
         ResizeMode = ResizeMode.NoResize;
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.Manual;
+
+        if (_useBackdrop)
+        {
+            // 非分层窗口才能拿到 DWM 亚克力；保留系统阴影。
+            WindowChrome.SetWindowChrome(this, new WindowChrome
+            {
+                CaptionHeight = 0,
+                ResizeBorderThickness = new Thickness(0),
+                GlassFrameThickness = new Thickness(-1),
+                CornerRadius = new CornerRadius(0),
+                UseAeroCaptionButtons = false,
+            });
+        }
 
         _autoClose = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _autoClose.Tick += (_, _) =>
@@ -42,12 +65,9 @@ public sealed class TrayMenuWindow : Window
         {
             if (action == null)
             {
-                panel.Children.Add(new Border
-                {
-                    Height = 1,
-                    Margin = new Thickness(6, 4, 6, 4),
-                    Background = (Brush)FindResource("StrokeBrush"),
-                });
+                var separator = new Border { Height = 1, Margin = new Thickness(6, 4, 6, 4) };
+                separator.SetResourceReference(Border.BackgroundProperty, "DividerStrokeColorDefaultBrush");
+                panel.Children.Add(separator);
                 continue;
             }
 
@@ -68,15 +88,38 @@ public sealed class TrayMenuWindow : Window
             panel.Children.Add(button);
         }
 
-        Content = new Border
+        var card = new Border
         {
-            Background = new SolidColorBrush(Color.FromRgb(0xF9, 0xF9, 0xF9)),
-            BorderBrush = (Brush)FindResource("StrokeBrush"),
+            Background = _useBackdrop
+                ? Brushes.Transparent
+                : TryFindResource("AcrylicBackgroundFillColorDefaultBrush") as Brush
+                  ?? new SolidColorBrush(Color.FromArgb(0xE6, 0xF9, 0xF9, 0xF9)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
-            Effect = (Effect)FindResource("MenuShadow"),
             Child = panel,
         };
+        card.SetResourceReference(Border.BorderBrushProperty, "CardStrokeColorDefaultBrush");
+
+        if (!_useBackdrop)
+            card.Effect = (Effect)FindResource("MenuShadow");
+
+        Content = card;
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        if (!_useBackdrop) return;
+
+        nint handle = new WindowInteropHelper(this).Handle;
+        if (handle == 0) return;
+
+        int corner = DwmcpRound;
+        DwmSetWindowAttribute(handle, DwmwaWindowCornerPreference, ref corner, sizeof(int));
+
+        int backdrop = DwmsbtTransientWindow;
+        DwmSetWindowAttribute(handle, DwmwaSystemBackdropType, ref backdrop, sizeof(int));
     }
 
     public void ShowAt(int physicalX, int physicalY)
@@ -114,6 +157,9 @@ public sealed class TrayMenuWindow : Window
         _autoClose.Stop();
         base.OnClosed(e);
     }
+
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
 
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

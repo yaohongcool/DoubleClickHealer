@@ -29,6 +29,4 @@ public partial class AboutWindow : Window
         Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
         e.Handled = true;
     }
-
-    private void Close_Click(object sender, RoutedEventArgs e) => Close();
 }

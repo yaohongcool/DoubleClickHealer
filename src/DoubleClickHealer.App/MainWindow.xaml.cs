@@ -1,18 +1,12 @@
+using System;
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Interop;
 using DoubleClickHealer.App.ViewModels;
 
 namespace DoubleClickHealer.App;
 
 public partial class MainWindow : Window
 {
-    private const int DwmwaWindowCornerPreference = 33;
-    private const int DwmcpRound = 2;
-
     public MainWindow(MainViewModel viewModel)
     {
         InitializeComponent();
@@ -27,47 +21,21 @@ public partial class MainWindow : Window
         Top = workArea.Top + (workArea.Height - Height) / 2;
     }
 
-    protected override void OnSourceInitialized(EventArgs e)
+    protected override void OnStateChanged(EventArgs e)
     {
-        base.OnSourceInitialized(e);
+        base.OnStateChanged(e);
 
-        nint handle = new WindowInteropHelper(this).Handle;
-        if (handle == 0) return;
-
-        // Windows 11 只在显式声明时给无边框窗口加圆角。
-        if (Environment.OSVersion.Version.Build >= 22000)
+        // 最小化按钮 = 收进托盘，而不是留在任务栏。
+        if (WindowState == WindowState.Minimized)
         {
-            int preference = DwmcpRound;
-            DwmSetWindowAttribute(handle, DwmwaWindowCornerPreference, ref preference, sizeof(int));
+            Hide();
+            WindowState = WindowState.Normal;
         }
     }
-
-    private void NumberBox_PreviewTextInput(object sender, TextCompositionEventArgs e)
-    {
-        e.Handled = !e.Text.All(char.IsDigit);
-    }
-
-    private void NumberBox_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter) return;
-
-        if (sender is TextBox box)
-            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-
-        Keyboard.ClearFocus();
-        e.Handled = true;
-    }
-
-    private void Minimize_Click(object sender, RoutedEventArgs e) => Hide();
-
-    private void Close_Click(object sender, RoutedEventArgs e) => Hide();
 
     protected override void OnClosing(CancelEventArgs e)
     {
         e.Cancel = true;
         Hide();
     }
-
-    [DllImport("dwmapi.dll")]
-    private static extern int DwmSetWindowAttribute(nint hwnd, int attribute, ref int value, int size);
 }

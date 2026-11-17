@@ -28,7 +28,7 @@
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    HorizontalAlignment="Center" Margin="0,4,0,0" />
 
-        <TextBlock Text="修复因微动或轴体老化产生的双击、连击与拖拽中断"
+        <TextBlock Text="修复「鼠标」及「键盘」出现的双击、连击问题"
                    FontSize="12" MaxWidth="300" TextWrapping="Wrap" TextAlignment="Center"
                    Foreground="{DynamicResource TextFillColorSecondaryBrush}"
                    HorizontalAlignment="Center" Margin="0,14,0,0" />

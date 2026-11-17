@@ -5,7 +5,7 @@
         xmlns:ikw="http://schemas.inkore.net/lib/ui/wpf"
         Title="设置"
         Icon="/Assets/app.ico"
-        Width="560" Height="660"
+        Width="560" Height="720"
         MinWidth="480" MinHeight="480"
         WindowStartupLocation="Manual"
         ShowInTaskbar="True"
@@ -27,9 +27,11 @@
         <ScrollViewer Grid.Row="0" Padding="20,12,20,0" VerticalScrollBarVisibility="Auto">
             <ikw:SimpleStackPanel Spacing="4">
                 <!-- Master switch -->
-                <ui:SettingsCard Header="开启监控" MinWidth="0"
-                                 Description="总开关：关闭后所有按键都不再修复">
-                    <ui:ToggleSwitch IsOn="{Binding Enabled}" />
+                <ui:SettingsCard Header="启用" MinWidth="0"
+                    <ui:SettingsCard.HeaderIcon>
+                        <ui:FontIcon FontSize="20" Icon="{x:Static ui:FluentSystemIcons.Power_20_Regular}" />
+                    </ui:SettingsCard.HeaderIcon>
+                    <ui:ToggleSwitch IsOn="{Binding Enabled}" OnContent="开" OffContent="关" />
                 </ui:SettingsCard>
 
                 <!-- System settings + key list, disabled together with the master switch -->
@@ -37,15 +39,39 @@
                     <ikw:SimpleStackPanel Spacing="4">
                         <ui:SettingsCard Header="开机自启" MinWidth="0"
                                          Description="登录 Windows 后自动在托盘中运行">
-                            <ui:ToggleSwitch IsOn="{Binding RunAtStartup}" />
+                            <ui:SettingsCard.HeaderIcon>
+                                <ui:FontIcon FontSize="20" Icon="{x:Static ui:FluentSystemIcons.Rocket_20_Regular}" />
+                            </ui:SettingsCard.HeaderIcon>
+                            <ui:ToggleSwitch IsOn="{Binding RunAtStartup}" OnContent="开" OffContent="关" />
                         </ui:SettingsCard>
 
                         <ui:SettingsCard Header="增强模式" MinWidth="0"
                                          Description="以管理员权限运行，重启软件后生效">
-                            <ui:ToggleSwitch IsOn="{Binding ElevatedMode}" />
+                            <ui:SettingsCard.HeaderIcon>
+                                <ui:FontIcon FontSize="20" Icon="{x:Static ui:FluentSystemIcons.Shield_20_Regular}" />
+                            </ui:SettingsCard.HeaderIcon>
+                            <ui:ToggleSwitch IsOn="{Binding ElevatedMode}" OnContent="开" OffContent="关" />
                         </ui:SettingsCard>
+                    </ikw:SimpleStackPanel>
+                </StackPanel>
 
-                        <ItemsControl ItemsSource="{Binding Rules}" Margin="0,8,0,0">
+                <!-- Theme -->
+                <ui:SettingsCard Header="主题" MinWidth="0"
+                                 Description="跟随系统会随 Windows 深浅色设置自动切换">
+                    <ui:SettingsCard.HeaderIcon>
+                        <ui:FontIcon FontSize="20" Icon="{x:Static ui:FluentSystemIcons.PaintBrush_20_Regular}" />
+                    </ui:SettingsCard.HeaderIcon>
+                    <ComboBox SelectedIndex="{Binding ThemeIndex}"
+                              MinWidth="0" Width="140">
+                        <ComboBoxItem Content="跟随系统" />
+                        <ComboBoxItem Content="浅色" />
+                        <ComboBoxItem Content="深色" />
+                    </ComboBox>
+                </ui:SettingsCard>
+
+                <!-- Key list -->
+                <StackPanel IsEnabled="{Binding Enabled}">
+                    <ItemsControl ItemsSource="{Binding Rules}" Margin="0,4,0,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <ui:SettingsCard Header="{Binding Name}"
@@ -61,7 +87,7 @@
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsMouse}" Value="True">
                                                                 <Setter Property="Icon"
-                                                                        Value="{x:Static ui:FluentSystemIcons.CursorClick_20_Regular}" />
+                                                                        Value="{x:Static ui:SegoeFluentIcons.Mouse}" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -81,6 +107,7 @@
                                                        Margin="8,0,0,0" VerticalAlignment="Center" />
 
                                             <ui:ToggleSwitch IsOn="{Binding Enabled}"
+                                                             OnContent="开" OffContent="关"
                                                              Margin="16,0,0,0" VerticalAlignment="Center" />
 
                                             <Button Width="32" Height="32" Padding="0"
@@ -97,7 +124,6 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </ikw:SimpleStackPanel>
                 </StackPanel>
             </ikw:SimpleStackPanel>
         </ScrollViewer>

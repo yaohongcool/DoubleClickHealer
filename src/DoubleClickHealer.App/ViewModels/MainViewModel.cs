@@ -5,6 +5,8 @@ using DoubleClickHealer.App.Services;
 using DoubleClickHealer.Core;
 using DoubleClickHealer.Core.Config;
 using DoubleClickHealer.Core.Engine;
+using iNKORE.UI.WPF.Modern;
+using Microsoft.Win32;
 
 namespace DoubleClickHealer.App.ViewModels;
 
@@ -18,6 +20,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _enabled;
     private bool _runAtStartup;
     private bool _elevatedMode;
+    private AppThemeMode _theme = AppThemeMode.System;
     private bool _isRecording;
     private string _statusText = "就绪";
 
@@ -35,6 +38,8 @@ public sealed class MainViewModel : ObservableObject
 
         AddRuleCommand = new RelayCommand(_ => ToggleRecording());
         RemoveRuleCommand = new RelayCommand(p => RemoveRule(p as KeyRuleViewModel));
+
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
         LoadFromConfig(store.Current);
     }
@@ -96,7 +101,68 @@ public sealed class MainViewModel : ObservableObject
         }
     }
 
-    public string AddButtonText => _isRecording ? "按下要添加的按键…（Esc 取消）" : "＋ 添加按键";
+    public AppThemeMode Theme
+    {
+        get => _theme;
+        set
+        {
+            if (!SetProperty(ref _theme, value)) return;
+
+            OnPropertyChanged(nameof(ThemeIndex));
+            ApplyTheme(value);
+            ScheduleSave();
+        }
+    }
+
+    public int ThemeIndex
+    {
+        get => (int)_theme;
+        set
+        {
+            if (value < 0 || value > 2) return;
+            Theme = (AppThemeMode)value;
+        }
+    }
+
+    // iNKORE 在 net8 下检测不到系统主题（ColorsHelper 回退到 Light），
+    // 所以「跟随系统」由项目自己读注册表 + 监听 SystemEvents 实现。
+    private void ApplyTheme(AppThemeMode mode)
+    {
+        bool light = mode switch
+        {
+            AppThemeMode.Light => true,
+            AppThemeMode.Dark => false,
+            _ => IsSystemLight(),
+        };
+
+        ThemeManager.Current.ApplicationTheme = light ? ApplicationTheme.Light : ApplicationTheme.Dark;
+    }
+
+    private static bool IsSystemLight()
+    {
+        object? value = Registry.GetValue(
+            @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+            "AppsUseLightTheme", 1);
+
+        return value is not int intValue || intValue != 0;
+    }
+
+    private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (_theme != AppThemeMode.System) return;
+        if (e.Category != UserPreferenceCategory.General && e.Category != UserPreferenceCategory.VisualStyle) return;
+
+        Application? app = Application.Current;
+        if (app == null || app.Dispatcher.HasShutdownStarted) return;
+
+        app.Dispatcher.BeginInvoke(() =>
+        {
+            if (_theme == AppThemeMode.System)
+                ApplyTheme(AppThemeMode.System);
+        });
+    }
+
+    public string AddButtonText => _isRecording ? "按下要添加的按键…（Esc 取消）" : "添加按键";
 
     public string StatusText
     {
@@ -117,9 +183,13 @@ public sealed class MainViewModel : ObservableObject
         _enabled = config.Enabled;
         _runAtStartup = config.RunAtStartup;
         _elevatedMode = config.ElevatedMode;
+        _theme = config.Theme;
         OnPropertyChanged(nameof(Enabled));
         OnPropertyChanged(nameof(RunAtStartup));
         OnPropertyChanged(nameof(ElevatedMode));
+        OnPropertyChanged(nameof(Theme));
+        OnPropertyChanged(nameof(ThemeIndex));
+        ApplyTheme(config.Theme);
 
         Rules.Clear();
         foreach (var rule in config.Targets)
@@ -211,6 +281,7 @@ public sealed class MainViewModel : ObservableObject
             Enabled = _enabled,
             RunAtStartup = _runAtStartup,
             ElevatedMode = _elevatedMode,
+            Theme = _theme,
             Targets = Rules.Select(rule => rule.ToModel()).ToList(),
         };
 
@@ -220,6 +291,7 @@ public sealed class MainViewModel : ObservableObject
 
     public void Dispose()
     {
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         _saveTimer.Stop();
         _recorder.Dispose();
     }

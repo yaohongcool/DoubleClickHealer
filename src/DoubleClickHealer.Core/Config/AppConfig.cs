@@ -14,6 +14,9 @@ public sealed record AppConfig
     /// <summary>以管理员权限运行（由任务计划实现，需重启生效）。</summary>
     public bool ElevatedMode { get; init; }
 
+    /// <summary>界面主题：跟随系统 / 浅色 / 深色。</summary>
+    public AppThemeMode Theme { get; init; } = AppThemeMode.System;
+
     public List<KeyRule> Targets { get; init; } = DefaultTargets();
 
     public static List<KeyRule> DefaultTargets() =>

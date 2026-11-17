@@ -4,18 +4,18 @@
     <FontFamily x:Key="AppFont">Segoe UI Variable Text, Segoe UI</FontFamily>
     <FontFamily x:Key="DisplayFont">Segoe UI Variable Display, Segoe UI</FontFamily>
 
-    <DropShadowEffect x:Key="MenuShadow" BlurRadius="20" ShadowDepth="4" Direction="270" Opacity="0.16" Color="#000000" />
+    <DropShadowEffect x:Key="MenuShadow" BlurRadius="16" ShadowDepth="2" Direction="270" Opacity="0.22" Color="#000000" />
 
     <!-- Win11 flyout menu item used by the tray menu window -->
     <Style x:Key="TrayMenuItemStyle" TargetType="Button">
-        <Setter Property="Height" Value="32" />
-        <Setter Property="MinWidth" Value="168" />
+        <Setter Property="Height" Value="36" />
+        <Setter Property="MinWidth" Value="180" />
         <Setter Property="Padding" Value="10,0" />
         <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
-        <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
-        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontFamily" Value="{DynamicResource ContentControlThemeFontFamily}" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Focusable" Value="False" />
         <Setter Property="Template">

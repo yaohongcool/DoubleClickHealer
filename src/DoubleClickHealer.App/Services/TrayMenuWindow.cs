@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Effects;
 using System.Windows.Shell;
 using System.Windows.Threading;
+using iNKORE.UI.WPF.Modern;
 
 namespace DoubleClickHealer.App.Services;
 
@@ -16,8 +17,10 @@ namespace DoubleClickHealer.App.Services;
 public sealed class TrayMenuWindow : Window
 {
     private const int DwmwaWindowCornerPreference = 33;
+    private const int DwmwaBorderColor = 34;
     private const int DwmwaSystemBackdropType = 38;
     private const int DwmcpRound = 2;
+    private const int DwmColorNone = unchecked((int)0xFFFFFFFE);
     private const int DwmsbtTransientWindow = 3;
     private const int Windows11AcrylicBuild = 22621;
 
@@ -39,14 +42,35 @@ public sealed class TrayMenuWindow : Window
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.Manual;
 
+        ElementTheme theme = ThemeManager.Current.ActualApplicationTheme == ApplicationTheme.Dark
+            ? ElementTheme.Dark
+            : ElementTheme.Light;
+        ThemeManager.SetRequestedTheme(this, theme);
+
+        bool dark = theme == ElementTheme.Dark;
+        Resources["TextFillColorPrimaryBrush"] =
+            new SolidColorBrush(dark ? Colors.White : Color.FromRgb(0x1A, 0x1A, 0x1A));
+        Resources["TextFillColorDisabledBrush"] =
+            new SolidColorBrush(dark ? Color.FromRgb(0x9A, 0x9A, 0x9A) : Color.FromRgb(0x8A, 0x8A, 0x8A));
+        Resources["SubtleFillColorSecondaryBrush"] =
+            new SolidColorBrush(dark ? Color.FromArgb(0x1E, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x12, 0x00, 0x00, 0x00));
+        Resources["SubtleFillColorTertiaryBrush"] =
+            new SolidColorBrush(dark ? Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x20, 0x00, 0x00, 0x00));
+        Resources["DividerStrokeColorDefaultBrush"] =
+            new SolidColorBrush(dark ? Color.FromArgb(0x28, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x28, 0x00, 0x00, 0x00));
+        Resources["CardStrokeColorDefaultBrush"] =
+            new SolidColorBrush(dark ? Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF) : Color.FromArgb(0x30, 0x00, 0x00, 0x00));
+        Resources["AcrylicBackgroundFillColorDefaultBrush"] =
+            new SolidColorBrush(dark ? Color.FromArgb(0xE6, 0x2B, 0x2B, 0x2B) : Color.FromArgb(0xE6, 0xF9, 0xF9, 0xF9));
+
         if (_useBackdrop)
         {
-            // 非分层窗口才能拿到 DWM 亚克力；保留系统阴影。
+            // 非分层窗口才能拿到 DWM 亚克力；不启用玻璃框，避免系统绘制白色边框。
             WindowChrome.SetWindowChrome(this, new WindowChrome
             {
                 CaptionHeight = 0,
                 ResizeBorderThickness = new Thickness(0),
-                GlassFrameThickness = new Thickness(-1),
+                GlassFrameThickness = new Thickness(0),
                 CornerRadius = new CornerRadius(0),
                 UseAeroCaptionButtons = false,
             });
@@ -90,14 +114,11 @@ public sealed class TrayMenuWindow : Window
 
         var card = new Border
         {
-            Background = _useBackdrop
-                ? Brushes.Transparent
-                : TryFindResource("AcrylicBackgroundFillColorDefaultBrush") as Brush
-                  ?? new SolidColorBrush(Color.FromArgb(0xE6, 0xF9, 0xF9, 0xF9)),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(8),
             Child = panel,
         };
+        card.SetResourceReference(Border.BackgroundProperty, "AcrylicBackgroundFillColorDefaultBrush");
         card.SetResourceReference(Border.BorderBrushProperty, "CardStrokeColorDefaultBrush");
 
         if (!_useBackdrop)
@@ -120,6 +141,9 @@ public sealed class TrayMenuWindow : Window
 
         int backdrop = DwmsbtTransientWindow;
         DwmSetWindowAttribute(handle, DwmwaSystemBackdropType, ref backdrop, sizeof(int));
+
+        int borderColor = DwmColorNone;
+        DwmSetWindowAttribute(handle, DwmwaBorderColor, ref borderColor, sizeof(int));
     }
 
     public void ShowAt(int physicalX, int physicalY)

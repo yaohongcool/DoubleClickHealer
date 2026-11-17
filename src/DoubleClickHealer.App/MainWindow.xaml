@@ -27,7 +27,7 @@
         <ScrollViewer Grid.Row="0" Padding="20,12,20,0" VerticalScrollBarVisibility="Auto">
             <ikw:SimpleStackPanel Spacing="4">
                 <!-- Master switch -->
-                <ui:SettingsCard Header="启用" MinWidth="0"
+                <ui:SettingsCard Header="启用" MinWidth="0">
                     <ui:SettingsCard.HeaderIcon>
                         <ui:FontIcon FontSize="20" Icon="{x:Static ui:FluentSystemIcons.Power_20_Regular}" />
                     </ui:SettingsCard.HeaderIcon>

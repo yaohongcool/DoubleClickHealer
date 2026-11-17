@@ -8,13 +8,13 @@
         ResizeMode="NoResize"
         WindowStartupLocation="Manual"
         ShowInTaskbar="False"
-        FontFamily="{StaticResource AppFont}"
+        Background="{DynamicResource SolidBackgroundFillColorBaseBrush}"
+        FontFamily="{DynamicResource ContentControlThemeFontFamily}"
         Foreground="{DynamicResource TextFillColorPrimaryBrush}"
         TextOptions.TextFormattingMode="Ideal"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
         ui:WindowHelper.UseModernWindowStyle="True"
-        ui:WindowHelper.SystemBackdropType="Acrylic"
         ui:WindowHelper.CornerStyle="Round">
 
     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24,0">
@@ -41,7 +41,13 @@
             </Hyperlink>
         </TextBlock>
 
-        <TextBlock Text="© 2026 DoubleClickHealer"
+        <Button x:Name="CheckUpdateButton" Content="检查更新"
+                Style="{StaticResource AccentButtonStyle}"
+                Height="32" MinWidth="96" Padding="16,0"
+                HorizontalAlignment="Center" Margin="0,12,0,0"
+                Click="CheckUpdate_Click" />
+
+        <TextBlock Text="Copyright © 2026 yaohongcool."
                    FontSize="11" Foreground="{DynamicResource TextFillColorTertiaryBrush}"
                    HorizontalAlignment="Center" Margin="0,24,0,0" />
     </StackPanel>

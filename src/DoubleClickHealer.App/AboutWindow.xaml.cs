@@ -15,7 +15,7 @@ public partial class AboutWindow : Window
         AppTheme.ApplySolidWindow(this);
 
         string version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.0.0";
-        VersionText.Text = $"Version {version}";
+        VersionText.Text = LocalizationService.Format("StrVersionFormat", version);
 
         CenterOnPrimaryScreen();
     }
@@ -42,7 +42,7 @@ public partial class AboutWindow : Window
     private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
     {
         CheckUpdateButton.IsEnabled = false;
-        CheckUpdateButton.Content = "检查中…";
+        CheckUpdateButton.Content = LocalizationService.Get("StrChecking");
 
         try
         {
@@ -54,24 +54,32 @@ public partial class AboutWindow : Window
             if (latest != null && UpdateChecker.IsNewer(latest, current))
             {
                 ShowUpdateDialog(
-                    "发现新版本",
-                    $"检测到新版本 v{latest.ToString(3)}，当前版本 v{current.ToString(3)}。",
-                    "前往下载",
+                    LocalizationService.Get("StrNewVersionTitle"),
+                    LocalizationService.Format("StrNewVersionMessage", latest.ToString(3), current.ToString(3)),
+                    LocalizationService.Get("StrDownload"),
                     () => Process.Start(new ProcessStartInfo(UpdateChecker.ReleasesUrl) { UseShellExecute = true }));
             }
             else
             {
-                ShowUpdateDialog("检查更新", "当前版本已经是最新版本。", "确定");
+                ShowUpdateDialog(
+                    LocalizationService.Get("StrCheckUpdate"),
+                    LocalizationService.Get("StrUpToDate"),
+                    LocalizationService.Get("StrOk"));
             }
         }
         catch
         {
             if (IsVisible)
-                ShowUpdateDialog("检查更新", "检查更新失败，请稍后重试。", "确定");
+            {
+                ShowUpdateDialog(
+                    LocalizationService.Get("StrCheckUpdate"),
+                    LocalizationService.Get("StrCheckFailed"),
+                    LocalizationService.Get("StrOk"));
+            }
         }
         finally
         {
-            CheckUpdateButton.Content = "检查更新";
+            CheckUpdateButton.Content = LocalizationService.Get("StrCheckUpdate");
             CheckUpdateButton.IsEnabled = true;
         }
     }

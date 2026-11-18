@@ -1,0 +1,59 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+
+    <sys:String x:Key="StrSettingsTitle">Settings</sys:String>
+    <sys:String x:Key="StrEnabled">Enabled</sys:String>
+    <sys:String x:Key="StrRunAtStartup">Start with Windows</sys:String>
+    <sys:String x:Key="StrRunAtStartupDesc">Run in the tray after you sign in</sys:String>
+    <sys:String x:Key="StrElevatedMode">Enhanced mode</sys:String>
+    <sys:String x:Key="StrElevatedModeDesc">Run as administrator. Takes effect after restart.</sys:String>
+    <sys:String x:Key="StrTheme">Theme</sys:String>
+    <sys:String x:Key="StrThemeDesc">Follows the Windows light or dark setting</sys:String>
+    <sys:String x:Key="StrThemeSystem">System</sys:String>
+    <sys:String x:Key="StrThemeLight">Light</sys:String>
+    <sys:String x:Key="StrThemeDark">Dark</sys:String>
+    <sys:String x:Key="StrOn">On</sys:String>
+    <sys:String x:Key="StrOff">Off</sys:String>
+    <sys:String x:Key="StrRemove">Remove</sys:String>
+
+    <sys:String x:Key="StrAddKey">Add key</sys:String>
+    <sys:String x:Key="StrAddKeyRecording">Press a key to add… (Esc to cancel)</sys:String>
+    <sys:String x:Key="StrReady">Ready</sys:String>
+    <sys:String x:Key="StrNoKeys">No keys added yet</sys:String>
+    <sys:String x:Key="StrMonitoring">Monitoring {0} key(s)</sys:String>
+    <sys:String x:Key="StrCanceled">Canceled</sys:String>
+    <sys:String x:Key="StrPressKey">Press a key to add. Esc to cancel.</sys:String>
+    <sys:String x:Key="StrAdded">Added {0}</sys:String>
+    <sys:String x:Key="StrAlreadyInList">{0} is already in the list</sys:String>
+    <sys:String x:Key="StrRemoved">Removed {0}</sys:String>
+    <sys:String x:Key="StrHookFailed">Global hook failed. Healing is inactive.</sys:String>
+
+    <sys:String x:Key="StrStartupFailed">Could not change the startup setting</sys:String>
+    <sys:String x:Key="StrElevationEnableFailed">Could not enable enhanced mode. Administrator approval is required.</sys:String>
+    <sys:String x:Key="StrElevationDisableFailed">Could not disable enhanced mode</sys:String>
+    <sys:String x:Key="StrElevationEnabled">Enhanced mode enabled. Restart the app to apply.</sys:String>
+    <sys:String x:Key="StrElevationDisabled">Enhanced mode disabled. Restart the app to apply.</sys:String>
+
+    <sys:String x:Key="StrAboutTitle">About</sys:String>
+    <sys:String x:Key="StrAppName">DoubleClickHealer</sys:String>
+    <sys:String x:Key="StrVersionFormat">Version {0}</sys:String>
+    <sys:String x:Key="StrAppDescription">Fixes double-click and chatter issues on mice and keyboards</sys:String>
+    <sys:String x:Key="StrCopyright">Copyright © 2026 yaohongcool.</sys:String>
+
+    <sys:String x:Key="StrCheckUpdate">Check for updates</sys:String>
+    <sys:String x:Key="StrChecking">Checking…</sys:String>
+    <sys:String x:Key="StrNewVersionTitle">Update available</sys:String>
+    <sys:String x:Key="StrNewVersionMessage">Version v{0} is available. You are on v{1}.</sys:String>
+    <sys:String x:Key="StrUpToDate">You are already on the latest version.</sys:String>
+    <sys:String x:Key="StrCheckFailed">Could not check for updates. Please try again later.</sys:String>
+    <sys:String x:Key="StrDownload">Download</sys:String>
+    <sys:String x:Key="StrOk">OK</sys:String>
+
+    <sys:String x:Key="StrLanguage">Language</sys:String>
+    <sys:String x:Key="StrLanguageChinese">中文</sys:String>
+    <sys:String x:Key="StrLanguageEnglish">English</sys:String>
+    <sys:String x:Key="StrRestartMessage">Restart the app to apply.</sys:String>
+    <sys:String x:Key="StrExit">Exit</sys:String>
+
+</ResourceDictionary>

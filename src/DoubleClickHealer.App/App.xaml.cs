@@ -43,6 +43,8 @@ public partial class App : Application
         _store.Save(_store.Current); // 迁移后的配置立即落盘
         _store.StartWatching();
 
+        LocalizationService.Initialize(_store.Current.Language);
+
         try
         {
             StartupService.SetEnabled(_store.Current.RunAtStartup);
@@ -76,7 +78,8 @@ public partial class App : Application
         _tray = new TrayService(
             show: ShowMainWindow,
             exit: ExitApplication,
-            about: ShowAbout);
+            about: ShowAbout,
+            store: _store);
 
         _store.Changed += config => Dispatcher.BeginInvoke(() =>
         {
@@ -85,7 +88,7 @@ public partial class App : Application
         });
 
         if (hookFailed)
-            _viewModel.ReportStatus("全局钩子安装失败，修复未生效");
+            _viewModel.ReportStatus(LocalizationService.Get("StrHookFailed"));
 
         // 由开机自启拉起时始终隐藏窗口，与是否首次运行无关。
         bool launchedAtStartup = e.Args.Contains("--minimized");
@@ -143,7 +146,8 @@ public partial class App : Application
     private void OnUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         e.Handled = true;
-        MessageBox.Show(e.Exception.Message, "双击修复器", MessageBoxButton.OK, MessageBoxImage.Warning);
+        MessageBox.Show(e.Exception.Message, LocalizationService.Get("StrAppName"),
+            MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     protected override void OnExit(ExitEventArgs e)

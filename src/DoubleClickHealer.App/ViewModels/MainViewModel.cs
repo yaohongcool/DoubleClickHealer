@@ -22,7 +22,7 @@ public sealed class MainViewModel : ObservableObject
     private bool _elevatedMode;
     private AppThemeMode _theme = AppThemeMode.System;
     private bool _isRecording;
-    private string _statusText = "就绪";
+    private string _statusText = "";
 
     public MainViewModel(ConfigStore store, HealerEngine engine)
     {
@@ -72,7 +72,7 @@ public sealed class MainViewModel : ObservableObject
             }
             catch (Exception)
             {
-                StatusText = "无法修改开机自启项";
+                StatusText = LocalizationService.Get("StrStartupFailed");
             }
 
             ScheduleSave();
@@ -92,11 +92,15 @@ public sealed class MainViewModel : ObservableObject
             {
                 _elevatedMode = !value;
                 OnPropertyChanged(nameof(ElevatedMode));
-                StatusText = value ? "增强模式启用失败，需要管理员确认" : "增强模式关闭失败";
+                StatusText = value
+                    ? LocalizationService.Get("StrElevationEnableFailed")
+                    : LocalizationService.Get("StrElevationDisableFailed");
                 return;
             }
 
-            StatusText = value ? "增强模式已启用，重启软件后生效" : "增强模式已关闭，重启软件后生效";
+            StatusText = value
+                ? LocalizationService.Get("StrElevationEnabled")
+                : LocalizationService.Get("StrElevationDisabled");
             ScheduleSave();
         }
     }
@@ -162,7 +166,8 @@ public sealed class MainViewModel : ObservableObject
         });
     }
 
-    public string AddButtonText => _isRecording ? "按下要添加的按键…（Esc 取消）" : "添加按键";
+    public string AddButtonText => LocalizationService.Get(
+        _isRecording ? "StrAddKeyRecording" : "StrAddKey");
 
     public string StatusText
     {
@@ -200,8 +205,8 @@ public sealed class MainViewModel : ObservableObject
         }
 
         StatusText = Rules.Count == 0
-            ? "还没有添加按键"
-            : $"已监控 {Rules.Count(r => r.Enabled)} 个按键";
+            ? LocalizationService.Get("StrNoKeys")
+            : LocalizationService.Format("StrMonitoring", Rules.Count(r => r.Enabled));
     }
 
     private void ToggleRecording()
@@ -210,7 +215,7 @@ public sealed class MainViewModel : ObservableObject
         {
             _recorder.Stop();
             SetRecording(false);
-            StatusText = "已取消";
+            StatusText = LocalizationService.Get("StrCanceled");
             return;
         }
 
@@ -218,14 +223,14 @@ public sealed class MainViewModel : ObservableObject
             _recorder.Stop();
 
         SetRecording(true);
-        StatusText = "请按下要添加的按键，Esc 取消";
+        StatusText = LocalizationService.Get("StrPressKey");
 
         _recorder.Start(
             onCaptured: (kind, code) => Application.Current.Dispatcher.BeginInvoke(() => OnCaptured(kind, code)),
             onCanceled: () => Application.Current.Dispatcher.BeginInvoke(() =>
             {
                 SetRecording(false);
-                StatusText = "已取消";
+                StatusText = LocalizationService.Get("StrCanceled");
             }));
     }
 
@@ -236,7 +241,7 @@ public sealed class MainViewModel : ObservableObject
 
         if (Rules.Any(r => r.Kind == kind && r.Code == code))
         {
-            StatusText = $"{KeyNames.Get(kind, code)} 已在列表中";
+            StatusText = LocalizationService.Format("StrAlreadyInList", KeyNames.Get(kind, code));
             return;
         }
 
@@ -248,7 +253,7 @@ public sealed class MainViewModel : ObservableObject
         viewModel.Changed += ScheduleSave;
         Rules.Add(viewModel);
 
-        StatusText = $"已添加 {viewModel.Name}";
+        StatusText = LocalizationService.Format("StrAdded", viewModel.Name);
         Persist();
     }
 
@@ -258,7 +263,7 @@ public sealed class MainViewModel : ObservableObject
 
         rule.Changed -= ScheduleSave;
         Rules.Remove(rule);
-        StatusText = $"已移除 {rule.Name}";
+        StatusText = LocalizationService.Format("StrRemoved", rule.Name);
         Persist();
     }
 

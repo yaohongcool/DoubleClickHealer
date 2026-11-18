@@ -8,10 +8,14 @@ public partial class UpdateDialog : Window
 {
     private readonly Action? _primaryAction;
 
-    public UpdateDialog(string headline, string message, string primaryText, Action? primaryAction = null)
+    public UpdateDialog(string headline, string message, string primaryText, Action? primaryAction = null,
+        string? windowTitle = null)
     {
         InitializeComponent();
         AppTheme.ApplySolidWindow(this);
+
+        if (!string.IsNullOrEmpty(windowTitle))
+            Title = windowTitle;
 
         HeadlineText.Text = headline;
         MessageText.Text = message;

@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
@@ -24,12 +25,13 @@ public sealed class TrayMenuWindow : Window
     private const int DwmsbtTransientWindow = 3;
     private const int Windows11AcrylicBuild = 22621;
 
-    private readonly DispatcherTimer _autoClose;
+    private readonly DispatcherTimer _popupCloseTimer;
     private readonly bool _useBackdrop;
     private DateTime _shownAt;
     private bool _actionInvoked;
+    private Popup? _activePopup;
 
-    public TrayMenuWindow(IReadOnlyList<(string Text, Action? Action)> items)
+    public TrayMenuWindow(IReadOnlyList<TrayMenuItem> items)
     {
         _useBackdrop = Environment.OSVersion.Version.Build >= Windows11AcrylicBuild;
 
@@ -41,6 +43,7 @@ public sealed class TrayMenuWindow : Window
         ResizeMode = ResizeMode.NoResize;
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.Manual;
+        SizeChanged += (_, _) => EnsureOnScreen();
 
         ElementTheme theme = ThemeManager.Current.ActualApplicationTheme == ApplicationTheme.Dark
             ? ElementTheme.Dark
@@ -76,41 +79,17 @@ public sealed class TrayMenuWindow : Window
             });
         }
 
-        _autoClose = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
-        _autoClose.Tick += (_, _) =>
+        _popupCloseTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(180) };
+        _popupCloseTimer.Tick += (_, _) =>
         {
-            _autoClose.Stop();
-            Close();
+            _popupCloseTimer.Stop();
+            ClosePopup();
         };
 
         var panel = new StackPanel { Margin = new Thickness(4) };
 
-        foreach (var (text, action) in items)
-        {
-            if (action == null)
-            {
-                var separator = new Border { Height = 1, Margin = new Thickness(6, 4, 6, 4) };
-                separator.SetResourceReference(Border.BackgroundProperty, "DividerStrokeColorDefaultBrush");
-                panel.Children.Add(separator);
-                continue;
-            }
-
-            var button = new Button
-            {
-                Content = text,
-                Style = (Style)FindResource("TrayMenuItemStyle"),
-            };
-
-            Action handler = action;
-            button.Click += (_, _) =>
-            {
-                _actionInvoked = true;
-                Close();
-                handler();
-            };
-
-            panel.Children.Add(button);
-        }
+        foreach (TrayMenuItem item in items)
+            AddMenuItem(panel, item);
 
         var card = new Border
         {
@@ -125,6 +104,161 @@ public sealed class TrayMenuWindow : Window
             card.Effect = (Effect)FindResource("MenuShadow");
 
         Content = card;
+    }
+
+    private void AddMenuItem(Panel parent, TrayMenuItem item)
+    {
+        if (item.Action == null && item.Children == null)
+        {
+            var separator = new Border { Height = 1, Margin = new Thickness(6, 4, 6, 4) };
+            separator.SetResourceReference(Border.BackgroundProperty, "DividerStrokeColorDefaultBrush");
+            parent.Children.Add(separator);
+            return;
+        }
+
+        if (item.Children is { Count: > 0 })
+        {
+            var content = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            content.Children.Add(new TextBlock
+            {
+                Text = item.Text,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+            content.Children.Add(new TextBlock
+            {
+                Text = "  ›",
+                Opacity = 0.7,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+
+            var expander = new Button
+            {
+                Content = content,
+                Style = (Style)FindResource("TrayMenuItemStyle"),
+            };
+            System.Windows.Automation.AutomationProperties.SetName(expander, item.Text);
+
+            var popupPanel = new StackPanel { Margin = new Thickness(4) };
+
+            foreach (TrayMenuItem child in item.Children)
+            {
+                var childButton = new Button
+                {
+                    Content = child.Text,
+                    Style = (Style)FindResource("TrayMenuItemStyle"),
+                };
+                System.Windows.Automation.AutomationProperties.SetName(childButton, child.Text);
+                childButton.Click += (_, _) => Invoke(child);
+                popupPanel.Children.Add(childButton);
+            }
+
+            var popupCard = new Border
+            {
+                Margin = new Thickness(10),
+                Background = (Brush)Resources["AcrylicBackgroundFillColorDefaultBrush"],
+                BorderBrush = (Brush)Resources["CardStrokeColorDefaultBrush"],
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Effect = (Effect)FindResource("MenuShadow"),
+                Child = popupPanel,
+            };
+
+            foreach (string key in new[]
+                     {
+                         "TextFillColorPrimaryBrush",
+                         "SubtleFillColorSecondaryBrush",
+                         "SubtleFillColorTertiaryBrush",
+                         "TextFillColorDisabledBrush",
+                     })
+            {
+                if (Resources.Contains(key))
+                    popupCard.Resources[key] = Resources[key];
+            }
+
+            var popup = new Popup
+            {
+                Placement = PlacementMode.Right,
+                PlacementTarget = expander,
+                HorizontalOffset = -6,
+                VerticalOffset = -10,
+                AllowsTransparency = true,
+                StaysOpen = true,
+                Child = popupCard,
+            };
+
+            expander.MouseEnter += (_, _) => ShowPopup(popup);
+            expander.Click += (_, _) => ShowPopup(popup);
+            expander.MouseLeave += (_, _) => ScheduleClosePopup();
+            popupCard.MouseEnter += (_, _) => _popupCloseTimer.Stop();
+            popupCard.MouseLeave += (_, _) => ScheduleClosePopup();
+
+            parent.Children.Add(expander);
+            return;
+        }
+
+        var button = new Button
+        {
+            Content = item.Text,
+            Style = (Style)FindResource("TrayMenuItemStyle"),
+        };
+        System.Windows.Automation.AutomationProperties.SetName(button, item.Text);
+        button.Click += (_, _) => Invoke(item);
+        parent.Children.Add(button);
+    }
+
+    private void ShowPopup(Popup popup)
+    {
+        _popupCloseTimer.Stop();
+        if (_activePopup != null && !ReferenceEquals(_activePopup, popup))
+            _activePopup.IsOpen = false;
+
+        _activePopup = popup;
+        popup.IsOpen = true;
+    }
+
+    private void ScheduleClosePopup()
+    {
+        _popupCloseTimer.Stop();
+        _popupCloseTimer.Start();
+    }
+
+    private void ClosePopup()
+    {
+        _popupCloseTimer.Stop();
+        if (_activePopup == null) return;
+
+        _activePopup.IsOpen = false;
+        _activePopup = null;
+    }
+
+    private void Invoke(TrayMenuItem item)
+    {
+        if (item.CloseOnInvoke)
+        {
+            _actionInvoked = true;
+            ClosePopup();
+            Close();
+        }
+
+        item.Action?.Invoke();
+    }
+
+    private void EnsureOnScreen()
+    {
+        Rect work = SystemParameters.WorkArea;
+
+        if (ActualHeight > 0 && Top + ActualHeight > work.Bottom)
+            Top = Math.Max(work.Top, work.Bottom - ActualHeight);
+
+        if (ActualWidth > 0 && Left + ActualWidth > work.Right)
+            Left = Math.Max(work.Left, work.Right - ActualWidth);
+
+        if (Top < work.Top) Top = work.Top;
+        if (Left < work.Left) Left = work.Left;
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -154,12 +288,12 @@ public sealed class TrayMenuWindow : Window
 
         _shownAt = DateTime.UtcNow;
         Show();
+        UpdateLayout();
+        EnsureOnScreen();
         Activate();
 
         nint handle = new WindowInteropHelper(this).Handle;
         if (handle != 0) SetForegroundWindow(handle);
-
-        _autoClose.Start();
     }
 
     protected override void OnDeactivated(EventArgs e)
@@ -172,13 +306,18 @@ public sealed class TrayMenuWindow : Window
         // 失焦和菜单项点击可能同时发生，延后一轮再判断，避免抢先关闭。
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
         {
-            if (!_actionInvoked) Close();
+            if (!_actionInvoked)
+            {
+                ClosePopup();
+                Close();
+            }
         });
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        _autoClose.Stop();
+        ClosePopup();
+        _popupCloseTimer.Stop();
         base.OnClosed(e);
     }
 

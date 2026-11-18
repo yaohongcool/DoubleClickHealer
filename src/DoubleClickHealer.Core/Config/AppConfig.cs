@@ -17,6 +17,9 @@ public sealed record AppConfig
     /// <summary>界面主题：跟随系统 / 浅色 / 深色。</summary>
     public AppThemeMode Theme { get; init; } = AppThemeMode.System;
 
+    /// <summary>界面语言：简体中文 / English。</summary>
+    public AppLanguage Language { get; init; } = AppLanguage.Chinese;
+
     public List<KeyRule> Targets { get; init; } = DefaultTargets();
 
     public static List<KeyRule> DefaultTargets() =>

@@ -111,8 +111,7 @@ public sealed class TrayService : IDisposable
         var dialog = new UpdateDialog(
             LocalizationService.Get("StrLanguage"),
             LocalizationService.Get("StrRestartMessage"),
-            LocalizationService.Get("StrOk"),
-            windowTitle: LocalizationService.Get("StrLanguage"))
+            LocalizationService.Get("StrOk"))
         {
             WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
             Topmost = true,

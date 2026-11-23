@@ -53,7 +53,7 @@ internal sealed class ReleaseTimer : IDisposable
             double remaining = Clock.TicksToMs(due - Clock.Now);
             if (remaining <= 0)
             {
-                _onDue();
+                InvokeDue();
                 continue;
             }
 
@@ -63,13 +63,25 @@ internal sealed class ReleaseTimer : IDisposable
             if (!Native.SetWaitableTimer(_timerHandle, ref relative, 0, 0, 0, false))
             {
                 Thread.Sleep((int)Math.Ceiling(remaining));
-                _onDue();
+                InvokeDue();
                 continue;
             }
 
             uint result = Native.WaitForMultipleObjects(2, handles, false, Native.INFINITE);
             if (result == Native.WAIT_OBJECT_0)
-                _onDue();
+                InvokeDue();
+        }
+    }
+
+    private void InvokeDue()
+    {
+        try
+        {
+            _onDue();
+        }
+        catch (Exception)
+        {
+            // 定时器线程必须保持存活，否则后续扣留的 UP 无法补发。
         }
     }
 
@@ -78,7 +90,7 @@ internal sealed class ReleaseTimer : IDisposable
         if (_disposed) return;
         _disposed = true;
         _wake.Set();
-        _thread.Join(1000);
+        _thread.Join();
 
         if (_timerHandle != 0)
         {

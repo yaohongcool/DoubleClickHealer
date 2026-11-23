@@ -25,6 +25,11 @@ public sealed class TrayMenuWindow : Window
     private const int DwmsbtTransientWindow = 3;
     private const int Windows11AcrylicBuild = 22621;
 
+    private const uint MonitorDefaultToNearest = 2;
+    private const uint SwpNoSize = 0x0001;
+    private const uint SwpNoZOrder = 0x0004;
+    private const uint SwpNoActivate = 0x0010;
+
     private readonly DispatcherTimer _popupCloseTimer;
     private readonly bool _useBackdrop;
     private DateTime _shownAt;
@@ -43,7 +48,7 @@ public sealed class TrayMenuWindow : Window
         ResizeMode = ResizeMode.NoResize;
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.Manual;
-        SizeChanged += (_, _) => EnsureOnScreen();
+        SizeChanged += (_, _) => ClampToMonitor();
 
         ElementTheme theme = ThemeManager.Current.ActualApplicationTheme == ApplicationTheme.Dark
             ? ElementTheme.Dark
@@ -247,18 +252,24 @@ public sealed class TrayMenuWindow : Window
         item.Action?.Invoke();
     }
 
-    private void EnsureOnScreen()
+    /// <summary>窗口尺寸变化后按物理像素重新约束在当前显示器工作区内。</summary>
+    private void ClampToMonitor()
     {
-        Rect work = SystemParameters.WorkArea;
+        nint handle = new WindowInteropHelper(this).Handle;
+        if (handle == 0) return;
+        if (!GetWindowRect(handle, out NativeRect rect)) return;
 
-        if (ActualHeight > 0 && Top + ActualHeight > work.Bottom)
-            Top = Math.Max(work.Top, work.Bottom - ActualHeight);
+        nint monitor = MonitorFromWindow(handle, MonitorDefaultToNearest);
+        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfo(monitor, ref info)) return;
 
-        if (ActualWidth > 0 && Left + ActualWidth > work.Right)
-            Left = Math.Max(work.Left, work.Right - ActualWidth);
+        int width = rect.Right - rect.Left;
+        int height = rect.Bottom - rect.Top;
+        int left = Math.Min(Math.Max(rect.Left, info.Work.Left), Math.Max(info.Work.Left, info.Work.Right - width));
+        int top = Math.Min(Math.Max(rect.Top, info.Work.Top), Math.Max(info.Work.Top, info.Work.Bottom - height));
 
-        if (Top < work.Top) Top = work.Top;
-        if (Left < work.Left) Left = work.Left;
+        if (left != rect.Left || top != rect.Top)
+            SetWindowPos(handle, 0, left, top, 0, 0, SwpNoSize | SwpNoZOrder | SwpNoActivate);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -282,18 +293,42 @@ public sealed class TrayMenuWindow : Window
 
     public void ShowAt(int physicalX, int physicalY)
     {
-        DpiScale dpi = VisualTreeHelper.GetDpi(this);
-        Left = physicalX / dpi.DpiScaleX;
-        Top = physicalY / dpi.DpiScaleY;
-
         _shownAt = DateTime.UtcNow;
+
+        // 先用透明窗口完成布局，再把物理像素坐标定位到目标显示器，避免闪现到主屏。
+        Opacity = 0;
         Show();
         UpdateLayout();
-        EnsureOnScreen();
+        MoveTo(physicalX, physicalY);
+        Opacity = 1;
         Activate();
 
         nint handle = new WindowInteropHelper(this).Handle;
         if (handle != 0) SetForegroundWindow(handle);
+    }
+
+    /// <summary>
+    /// 托盘坐标是物理像素，而 WPF 的 Left/Top 是 DIP。先确定目标显示器及其 DPI，
+    /// 再用 SetWindowPos 按物理像素定位，避免多屏不同缩放下的偏移。
+    /// </summary>
+    private void MoveTo(int x, int y)
+    {
+        nint handle = new WindowInteropHelper(this).Handle;
+        if (handle == 0) return;
+
+        nint monitor = MonitorFromPoint(new NativePoint { X = x, Y = y }, MonitorDefaultToNearest);
+        var info = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (!GetMonitorInfo(monitor, ref info)) return;
+
+        uint dpi = GetDpiForWindow(handle);
+        double scale = dpi == 0 ? 1.0 : dpi / 96.0;
+        int width = (int)Math.Ceiling(ActualWidth * scale);
+        int height = (int)Math.Ceiling(ActualHeight * scale);
+
+        int left = Math.Min(Math.Max(x, info.Work.Left), Math.Max(info.Work.Left, info.Work.Right - width));
+        int top = Math.Min(Math.Max(y, info.Work.Top), Math.Max(info.Work.Top, info.Work.Bottom - height));
+
+        SetWindowPos(handle, 0, left, top, 0, 0, SwpNoSize | SwpNoZOrder | SwpNoActivate);
     }
 
     protected override void OnDeactivated(EventArgs e)
@@ -327,4 +362,50 @@ public sealed class TrayMenuWindow : Window
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool SetForegroundWindow(nint hWnd);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativePoint
+    {
+        public int X;
+        public int Y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct NativeRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MonitorInfo
+    {
+        public int Size;
+        public NativeRect Monitor;
+        public NativeRect Work;
+        public uint Flags;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern nint MonitorFromPoint(NativePoint pt, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    private static extern nint MonitorFromWindow(nint hwnd, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetMonitorInfo(nint hMonitor, ref MonitorInfo lpmi);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(nint hwnd);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int x, int y, int cx, int cy, uint uFlags);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetWindowRect(nint hWnd, out NativeRect lpRect);
 }

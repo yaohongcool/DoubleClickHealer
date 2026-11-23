@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using DoubleClickHealer.Core.Input;
 using DoubleClickHealer.Core.Interop;
 
 namespace DoubleClickHealer.Core;
@@ -39,20 +40,37 @@ public sealed class KeyRecorder : IDisposable
 
         _thread = new Thread(ThreadMain) { IsBackground = true, Name = "DCH.KeyRecorder" };
         _thread.Start();
-        _ready.Wait();
+
+        if (!_ready.Wait(TimeSpan.FromSeconds(5)))
+        {
+            _running = false;
+            var stuck = _thread;
+            _thread = null;
+            if (_threadId != 0)
+                Native.PostThreadMessageW(_threadId, Native.WM_QUIT, 0, 0);
+            stuck?.Join(1000);
+            throw new TimeoutException("启动按键录制线程超时");
+        }
     }
 
-    public void Stop()
+    public void Stop() => StopCore();
+
+    private bool StopCore()
     {
         var thread = _thread;
-        if (thread == null) return;
+        if (thread == null) return true;
 
         _running = false;
-        Native.PostThreadMessageW(_threadId, Native.WM_QUIT, 0, 0);
-        thread.Join(1000);
-        _thread = null;
+        if (_threadId != 0)
+            Native.PostThreadMessageW(_threadId, Native.WM_QUIT, 0, 0);
+
+        bool joined = thread.Join(5000);
+        if (joined)
+            _thread = null;
+
         _onCaptured = null;
         _onCanceled = null;
+        return joined;
     }
 
     private void ThreadMain()
@@ -99,17 +117,24 @@ public sealed class KeyRecorder : IDisposable
         if (nCode < 0)
             return Native.CallNextHookEx(0, nCode, wParam, lParam);
 
-        unsafe
+        try
         {
-            var data = (Native.MSLLHOOKSTRUCT*)lParam;
-            if ((data->flags & Native.LLMHF_INJECTED) != 0)
-                return Native.CallNextHookEx(0, nCode, wParam, lParam);
+            unsafe
+            {
+                var data = (Native.MSLLHOOKSTRUCT*)lParam;
+                if (data->dwExtraInfo == InputInjector.InjectionMagic)
+                    return Native.CallNextHookEx(0, nCode, wParam, lParam);
 
-            if (!TryMapMouse((int)wParam, data, out int button))
-                return Native.CallNextHookEx(0, nCode, wParam, lParam);
+                if (!TryMapMouse((int)wParam, data, out int button))
+                    return Native.CallNextHookEx(0, nCode, wParam, lParam);
 
-            Capture(InputKind.Mouse, button);
-            return 1;
+                Capture(InputKind.Mouse, button);
+                return 1;
+            }
+        }
+        catch (Exception)
+        {
+            return Native.CallNextHookEx(0, nCode, wParam, lParam);
         }
     }
 
@@ -118,29 +143,36 @@ public sealed class KeyRecorder : IDisposable
         if (nCode < 0)
             return Native.CallNextHookEx(0, nCode, wParam, lParam);
 
-        unsafe
+        try
         {
-            var data = (Native.KBDLLHOOKSTRUCT*)lParam;
-            if ((data->flags & Native.LLKHF_INJECTED) != 0)
-                return Native.CallNextHookEx(0, nCode, wParam, lParam);
-
-            int message = (int)wParam;
-            if (message is not (Native.WM_KEYDOWN or Native.WM_SYSKEYDOWN))
-                return Native.CallNextHookEx(0, nCode, wParam, lParam);
-
-            int virtualKey = VirtualKeys.Normalize(
-                (int)data->vkCode,
-                (int)data->scanCode,
-                (data->flags & Native.LLKHF_EXTENDED) != 0);
-
-            if (virtualKey == VkEscape)
+            unsafe
             {
-                Cancel();
+                var data = (Native.KBDLLHOOKSTRUCT*)lParam;
+                if (data->dwExtraInfo == InputInjector.InjectionMagic)
+                    return Native.CallNextHookEx(0, nCode, wParam, lParam);
+
+                int message = (int)wParam;
+                if (message is not (Native.WM_KEYDOWN or Native.WM_SYSKEYDOWN))
+                    return Native.CallNextHookEx(0, nCode, wParam, lParam);
+
+                int virtualKey = VirtualKeys.Normalize(
+                    (int)data->vkCode,
+                    (int)data->scanCode,
+                    (data->flags & Native.LLKHF_EXTENDED) != 0);
+
+                if (virtualKey == VkEscape)
+                {
+                    Cancel();
+                    return 1;
+                }
+
+                Capture(InputKind.Keyboard, virtualKey);
                 return 1;
             }
-
-            Capture(InputKind.Keyboard, virtualKey);
-            return 1;
+        }
+        catch (Exception)
+        {
+            return Native.CallNextHookEx(0, nCode, wParam, lParam);
         }
     }
 
@@ -194,7 +226,9 @@ public sealed class KeyRecorder : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        Stop();
-        _ready.Dispose();
+
+        // 只有录制线程确实退出后才释放同步对象。
+        if (StopCore())
+            _ready.Dispose();
     }
 }

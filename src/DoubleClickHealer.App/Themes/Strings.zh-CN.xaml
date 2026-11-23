@@ -28,8 +28,13 @@
     <sys:String x:Key="StrAlreadyInList">{0} 已在列表中</sys:String>
     <sys:String x:Key="StrRemoved">已移除 {0}</sys:String>
     <sys:String x:Key="StrHookFailed">全局钩子安装失败，修复未生效</sys:String>
+    <sys:String x:Key="StrHookPartialFailed">部分输入钩子安装失败，鼠标或键盘其中一项可能无法修复</sys:String>
+    <sys:String x:Key="StrConfigRecovered">配置文件已损坏，已备份并恢复默认设置</sys:String>
+    <sys:String x:Key="StrConfigLoadFailed">配置文件读取失败，当前使用默认设置</sys:String>
+    <sys:String x:Key="StrSaveFailed">设置保存失败，请检查磁盘权限</sys:String>
 
     <sys:String x:Key="StrStartupFailed">无法修改开机自启项</sys:String>
+    <sys:String x:Key="StrElevationApplying">正在等待管理员确认…</sys:String>
     <sys:String x:Key="StrElevationEnableFailed">增强模式启用失败，需要管理员确认</sys:String>
     <sys:String x:Key="StrElevationDisableFailed">增强模式关闭失败</sys:String>
     <sys:String x:Key="StrElevationEnabled">增强模式已启用，重启软件后生效</sys:String>

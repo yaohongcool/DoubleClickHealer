@@ -36,6 +36,8 @@ public sealed class InputHook : IDisposable
     private uint _threadId;
     private nint _mouseHook;
     private nint _keyboardHook;
+    private volatile bool _mouseHookActive;
+    private volatile bool _keyboardHookActive;
     private long _lastActivityTicks;
     private volatile bool _running;
     private Exception? _startupError;
@@ -50,6 +52,12 @@ public sealed class InputHook : IDisposable
 
     public Action<HookTrace>? OnTrace { get; set; }
 
+    /// <summary>鼠标钩子是否安装成功。与键盘钩子独立，允许只修复其中一种输入。</summary>
+    public bool MouseHookActive => _mouseHookActive;
+
+    /// <summary>键盘钩子是否安装成功。</summary>
+    public bool KeyboardHookActive => _keyboardHookActive;
+
     public void Start()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -62,12 +70,24 @@ public sealed class InputHook : IDisposable
 
         _thread = new Thread(ThreadMain) { IsBackground = true, Name = "DCH.InputHook" };
         _thread.Start();
-        _ready.Wait();
+
+        if (!_ready.Wait(TimeSpan.FromSeconds(5)))
+        {
+            _running = false;
+            var stuck = _thread;
+            _thread = null;
+            if (_threadId != 0)
+                Native.PostThreadMessageW(_threadId, Native.WM_QUIT, 0, 0);
+            stuck?.Join(1000);
+            throw new TimeoutException("启动输入钩子线程超时");
+        }
 
         if (_startupError != null)
         {
             _running = false;
+            var failed = _thread;
             _thread = null;
+            failed?.Join(1000);
             throw new InvalidOperationException("安装全局钩子失败", _startupError);
         }
 
@@ -75,19 +95,32 @@ public sealed class InputHook : IDisposable
         _watchdog.Start();
     }
 
-    public void Stop()
+    public void Stop() => StopCore();
+
+    private bool StopCore()
     {
         var thread = _thread;
-        if (thread == null) return;
+        if (thread == null) return true;
 
         _running = false;
         _stopSignal.Set();
-        Native.PostThreadMessageW(_threadId, Native.WM_QUIT, 0, 0);
-        thread.Join(2000);
+        if (_threadId != 0)
+            Native.PostThreadMessageW(_threadId, Native.WM_QUIT, 0, 0);
 
-        _watchdog?.Join(1000);
-        _watchdog = null;
-        _thread = null;
+        bool threadJoined = thread.Join(5000);
+        if (threadJoined)
+            _thread = null;
+
+        bool watchdogJoined = true;
+        var watchdog = _watchdog;
+        if (watchdog != null)
+        {
+            watchdogJoined = watchdog.Join(2000);
+            if (watchdogJoined)
+                _watchdog = null;
+        }
+
+        return threadJoined && watchdogJoined;
     }
 
     private void ThreadMain()
@@ -97,7 +130,11 @@ public sealed class InputHook : IDisposable
         Volatile.Write(ref _lastActivityTicks, Clock.Now);
         _ready.Set();
 
-        if (_startupError != null) return;
+        if (_mouseHook == 0 && _keyboardHook == 0)
+        {
+            UninstallHooks();
+            return;
+        }
 
         while (_running)
         {
@@ -120,11 +157,18 @@ public sealed class InputHook : IDisposable
     private void InstallHooks()
     {
         nint module = Native.GetModuleHandleW(null);
-        _mouseHook = Native.SetWindowsHookExW(Native.WH_MOUSE_LL, _mouseProc, module, 0);
-        _keyboardHook = Native.SetWindowsHookExW(Native.WH_KEYBOARD_LL, _keyboardProc, module, 0);
 
-        if (_mouseHook == 0 || _keyboardHook == 0)
-            _startupError = new Win32Exception(Marshal.GetLastWin32Error());
+        _mouseHook = Native.SetWindowsHookExW(Native.WH_MOUSE_LL, _mouseProc, module, 0);
+        _mouseHookActive = _mouseHook != 0;
+        int mouseError = _mouseHook == 0 ? Marshal.GetLastWin32Error() : 0;
+
+        _keyboardHook = Native.SetWindowsHookExW(Native.WH_KEYBOARD_LL, _keyboardProc, module, 0);
+        _keyboardHookActive = _keyboardHook != 0;
+        int keyboardError = _keyboardHook == 0 ? Marshal.GetLastWin32Error() : 0;
+
+        // 单个钩子失败时仍可修复另一种输入，只有全部失败才视为启动错误。
+        if (_mouseHook == 0 && _keyboardHook == 0)
+            _startupError = new Win32Exception(mouseError != 0 ? mouseError : keyboardError);
     }
 
     private void ReinstallHooks()
@@ -143,11 +187,15 @@ public sealed class InputHook : IDisposable
             _mouseHook = 0;
         }
 
+        _mouseHookActive = false;
+
         if (_keyboardHook != 0)
         {
             Native.UnhookWindowsHookEx(_keyboardHook);
             _keyboardHook = 0;
         }
+
+        _keyboardHookActive = false;
     }
 
     /// <summary>
@@ -181,35 +229,45 @@ public sealed class InputHook : IDisposable
         if (nCode < 0)
             return Native.CallNextHookEx(0, nCode, wParam, lParam);
 
-        unsafe
+        try
         {
-            var data = (Native.MSLLHOOKSTRUCT*)lParam;
-#if DEBUG
-            bool isTest = data->dwExtraInfo == InputInjector.TestMagic;
-#else
-            const bool isTest = false;
-#endif
-            if (!isTest && ((data->flags & Native.LLMHF_INJECTED) != 0 || data->dwExtraInfo == InputInjector.InjectionMagic))
-                return Native.CallNextHookEx(0, nCode, wParam, lParam);
-
-            Volatile.Write(ref _lastActivityTicks, Clock.Now);
-
-            if (!TryMapMouse((int)wParam, data, out int button, out bool isDown))
-                return Native.CallNextHookEx(0, nCode, wParam, lParam);
-
-            var verdict = _engine.Process(InputKind.Mouse, button, isDown);
-            OnTrace?.Invoke(new HookTrace(InputKind.Mouse, button, isDown, verdict, Clock.Now, IsTest: isTest));
-
-            if (verdict == InputVerdict.EmitUpThenPass)
+            unsafe
             {
-                // 钩子内绝不能调用 SendInput：会等待自己处理输入而死锁到超时。
-                _engine.QueueReplay(InputKind.Mouse, button);
-                return 1;
-            }
+                var data = (Native.MSLLHOOKSTRUCT*)lParam;
+#if DEBUG
+                bool isTest = data->dwExtraInfo == InputInjector.TestMagic;
+#else
+                const bool isTest = false;
+#endif
+                // 只过滤自身注入。远程桌面、触摸板等来源也会带 INJECTED 标记，
+                // 全量过滤会让这些场景下的修复功能完全失效。
+                if (!isTest && data->dwExtraInfo == InputInjector.InjectionMagic)
+                    return Native.CallNextHookEx(0, nCode, wParam, lParam);
 
-            return verdict == InputVerdict.Swallow
-                ? 1
-                : Native.CallNextHookEx(0, nCode, wParam, lParam);
+                Volatile.Write(ref _lastActivityTicks, Clock.Now);
+
+                if (!TryMapMouse((int)wParam, data, out int button, out bool isDown))
+                    return Native.CallNextHookEx(0, nCode, wParam, lParam);
+
+                var verdict = _engine.Process(InputKind.Mouse, button, isDown);
+                OnTrace?.Invoke(new HookTrace(InputKind.Mouse, button, isDown, verdict, Clock.Now, IsTest: isTest));
+
+                if (verdict == InputVerdict.EmitUpThenPass)
+                {
+                    // 钩子内绝不能调用 SendInput：会等待自己处理输入而死锁到超时。
+                    _engine.QueueReplay(InputKind.Mouse, button);
+                    return 1;
+                }
+
+                return verdict == InputVerdict.Swallow
+                    ? 1
+                    : Native.CallNextHookEx(0, nCode, wParam, lParam);
+            }
+        }
+        catch (Exception)
+        {
+            // 低级钩子回调里抛异常会被系统摘除钩子，必须兜底放行。
+            return Native.CallNextHookEx(0, nCode, wParam, lParam);
         }
     }
 
@@ -218,42 +276,49 @@ public sealed class InputHook : IDisposable
         if (nCode < 0)
             return Native.CallNextHookEx(0, nCode, wParam, lParam);
 
-        unsafe
+        try
         {
-            var data = (Native.KBDLLHOOKSTRUCT*)lParam;
-#if DEBUG
-            bool isTest = data->dwExtraInfo == InputInjector.TestMagic;
-#else
-            const bool isTest = false;
-#endif
-            if (!isTest && ((data->flags & Native.LLKHF_INJECTED) != 0 || data->dwExtraInfo == InputInjector.InjectionMagic))
-                return Native.CallNextHookEx(0, nCode, wParam, lParam);
-
-            Volatile.Write(ref _lastActivityTicks, Clock.Now);
-
-            int message = (int)wParam;
-            bool isDown = message is Native.WM_KEYDOWN or Native.WM_SYSKEYDOWN;
-            bool isUp = message is Native.WM_KEYUP or Native.WM_SYSKEYUP;
-            if (!isDown && !isUp)
-                return Native.CallNextHookEx(0, nCode, wParam, lParam);
-
-            int virtualKey = VirtualKeys.Normalize(
-                (int)data->vkCode,
-                (int)data->scanCode,
-                (data->flags & Native.LLKHF_EXTENDED) != 0);
-
-            var verdict = _engine.Process(InputKind.Keyboard, virtualKey, isDown);
-            OnTrace?.Invoke(new HookTrace(InputKind.Keyboard, virtualKey, isDown, verdict, Clock.Now, IsTest: isTest));
-
-            if (verdict == InputVerdict.EmitUpThenPass)
+            unsafe
             {
-                _engine.QueueReplay(InputKind.Keyboard, virtualKey);
-                return 1;
-            }
+                var data = (Native.KBDLLHOOKSTRUCT*)lParam;
+#if DEBUG
+                bool isTest = data->dwExtraInfo == InputInjector.TestMagic;
+#else
+                const bool isTest = false;
+#endif
+                if (!isTest && data->dwExtraInfo == InputInjector.InjectionMagic)
+                    return Native.CallNextHookEx(0, nCode, wParam, lParam);
 
-            return verdict == InputVerdict.Swallow
-                ? 1
-                : Native.CallNextHookEx(0, nCode, wParam, lParam);
+                Volatile.Write(ref _lastActivityTicks, Clock.Now);
+
+                int message = (int)wParam;
+                bool isDown = message is Native.WM_KEYDOWN or Native.WM_SYSKEYDOWN;
+                bool isUp = message is Native.WM_KEYUP or Native.WM_SYSKEYUP;
+                if (!isDown && !isUp)
+                    return Native.CallNextHookEx(0, nCode, wParam, lParam);
+
+                int virtualKey = VirtualKeys.Normalize(
+                    (int)data->vkCode,
+                    (int)data->scanCode,
+                    (data->flags & Native.LLKHF_EXTENDED) != 0);
+
+                var verdict = _engine.Process(InputKind.Keyboard, virtualKey, isDown);
+                OnTrace?.Invoke(new HookTrace(InputKind.Keyboard, virtualKey, isDown, verdict, Clock.Now, IsTest: isTest));
+
+                if (verdict == InputVerdict.EmitUpThenPass)
+                {
+                    _engine.QueueReplay(InputKind.Keyboard, virtualKey);
+                    return 1;
+                }
+
+                return verdict == InputVerdict.Swallow
+                    ? 1
+                    : Native.CallNextHookEx(0, nCode, wParam, lParam);
+            }
+        }
+        catch (Exception)
+        {
+            return Native.CallNextHookEx(0, nCode, wParam, lParam);
         }
     }
 
@@ -295,8 +360,12 @@ public sealed class InputHook : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        Stop();
-        _ready.Dispose();
-        _stopSignal.Dispose();
+
+        // 只有线程确实退出后才释放同步对象，避免后台线程访问已释放的句柄。
+        if (StopCore())
+        {
+            _ready.Dispose();
+            _stopSignal.Dispose();
+        }
     }
 }

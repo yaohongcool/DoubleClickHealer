@@ -56,7 +56,7 @@ public sealed class HealerEngine : IDisposable
             outcome = isDown ? state.OnDown(now) : state.OnUp(now);
         }
 
-        if (outcome.ReleaseDue != 0 || !isDown)
+        if (outcome.ReleaseDue != 0)
             _timer?.Nudge();
 
         return outcome.Verdict;
@@ -66,31 +66,56 @@ public sealed class HealerEngine : IDisposable
     public void QueueReplay(InputKind kind, int code) => _injector.EnqueueReplay(kind, code);
 
     /// <summary>
-    /// 热替换监控规则。被移除或重建的按键若有扣留中的 UP，会立即补发，避免系统卡在按下状态。
+    /// 热替换监控规则。参数未变的按键复用原状态；参数变化的按键继承按住状态；
+    /// 被移除或重建的按键若有扣留中的 UP，会立即补发，避免系统卡在按下状态。
     /// </summary>
     public void UpdateRules(IEnumerable<KeyRule> rules)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        var next = new Dictionary<(InputKind Kind, int Code), DebounceState>();
+        var nextRules = new Dictionary<(InputKind Kind, int Code), KeyRule>();
         foreach (var rule in rules)
         {
             if (rule.Enabled)
-                next[(rule.Kind, rule.Code)] = new DebounceState(rule);
+                nextRules[(rule.Kind, rule.Code)] = rule;
         }
 
         List<(InputKind Kind, int Code)>? stale = null;
+        var nextStates = new Dictionary<(InputKind Kind, int Code), DebounceState>();
 
         lock (_gate)
         {
+            foreach (var (key, rule) in nextRules)
+            {
+                _states.TryGetValue(key, out var previous);
+
+                if (previous != null && previous.Matches(rule))
+                {
+                    nextStates[key] = previous;
+                    continue;
+                }
+
+                var replacement = new DebounceState(rule);
+
+                if (previous != null)
+                {
+                    if (previous.TryTakeRelease(long.MaxValue))
+                        (stale ??= []).Add(key);
+
+                    replacement.AdoptRuntimeState(previous);
+                }
+
+                nextStates[key] = replacement;
+            }
+
             foreach (var (key, state) in _states)
             {
-                if (state.TryTakeRelease(long.MaxValue))
-                    (stale ??= new()).Add(key);
+                if (!nextRules.ContainsKey(key) && state.TryTakeRelease(long.MaxValue))
+                    (stale ??= []).Add(key);
             }
 
             _states.Clear();
-            foreach (var (key, state) in next)
+            foreach (var (key, state) in nextStates)
                 _states[key] = state;
         }
 

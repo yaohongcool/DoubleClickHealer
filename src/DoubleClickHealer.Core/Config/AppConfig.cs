@@ -36,6 +36,17 @@ public sealed record AppConfig
     /// </summary>
     public static AppConfig Migrate(AppConfig config)
     {
+        // JSON 里的 "targets": null 或 [null] 会在运行时产生 null，必须先归一化，
+        // 否则后续 Count/Where 会抛 NullReferenceException。
+        List<KeyRule> targets = config.Targets is null
+            ? DefaultTargets()
+            : config.Targets
+                .Where(rule => rule is not null)
+                .Select(NormalizeRule)
+                .ToList();
+
+        config = config with { Targets = targets };
+
         if (config.Version >= 3) return config;
 
         var migrated = config;
@@ -70,4 +81,12 @@ public sealed record AppConfig
 
         return migrated;
     }
+
+    private static KeyRule NormalizeRule(KeyRule rule) => rule with
+    {
+        HoldMs = Math.Clamp(rule.HoldMs, 0, 120),
+        ChatterGapMs = Math.Clamp(rule.ChatterGapMs, 0, 500),
+        ChatterPressMs = Math.Clamp(rule.ChatterPressMs, 0, 500),
+        ChatterGapLongMs = Math.Clamp(rule.ChatterGapLongMs, 0, 1000),
+    };
 }

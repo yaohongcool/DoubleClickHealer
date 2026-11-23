@@ -19,6 +19,7 @@ public readonly record struct StateOutcome(InputVerdict Verdict, long ReleaseDue
 /// </summary>
 public sealed class DebounceState
 {
+    private readonly KeyRule _rule;
     private readonly bool _isKeyboard;
     private readonly bool _holdEnabled;
     private readonly long _gapTicks;
@@ -37,6 +38,7 @@ public sealed class DebounceState
 
     public DebounceState(KeyRule rule)
     {
+        _rule = rule;
         _isKeyboard = rule.Kind == InputKind.Keyboard;
         _holdEnabled = rule.HoldMs > 0;
         _holdTicks = Clock.MsToTicks(rule.HoldMs);
@@ -92,8 +94,15 @@ public sealed class DebounceState
     {
         if (!_isDown)
         {
-            if (_suppressUp) _suppressUp = false;
-            return new StateOutcome(InputVerdict.Swallow, 0);
+            if (_suppressUp)
+            {
+                _suppressUp = false;
+                return new StateOutcome(InputVerdict.Swallow, 0);
+            }
+
+            // 从未见过对应 DOWN 的 UP：可能是启动时按键已被按住、钩子重装丢事件，
+            // 或规则热更新重建了状态。必须放行，否则系统会一直认为该键处于按下状态。
+            return new StateOutcome(InputVerdict.PassThrough, 0);
         }
 
         _isDown = false;
@@ -107,6 +116,26 @@ public sealed class DebounceState
         _pendingUp = true;
         _releaseDue = now + _holdTicks;
         return new StateOutcome(InputVerdict.Swallow, _releaseDue);
+    }
+
+    /// <summary>规则参数是否与创建状态时完全一致。一致时热更新可以复用整个状态。</summary>
+    public bool Matches(KeyRule rule) => _rule == rule;
+
+    /// <summary>
+    /// 规则参数变化但按键仍在列表中时，沿用旧的运行时状态，
+    /// 避免按住中的按键丢失 <c>_isDown</c> 导致松手事件被误判。
+    /// 扣留中的 UP 由调用方负责立即补发。
+    /// </summary>
+    internal void AdoptRuntimeState(DebounceState previous)
+    {
+        _isDown = previous._isDown;
+        _hasUp = previous._hasUp;
+        _suppressUp = previous._suppressUp;
+        _downTs = previous._downTs;
+        _upTs = previous._upTs;
+        _lastPressTicks = previous._lastPressTicks;
+        _pendingUp = false;
+        _releaseDue = 0;
     }
 
     /// <summary>到期则原子地取走待释放状态，调用方随后注入 UP。</summary>

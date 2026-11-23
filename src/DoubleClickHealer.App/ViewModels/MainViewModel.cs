@@ -23,6 +23,8 @@ public sealed class MainViewModel : ObservableObject
     private AppThemeMode _theme = AppThemeMode.System;
     private bool _isRecording;
     private string _statusText = "";
+    private int _elevationRequest;
+    private bool _disposed;
 
     public MainViewModel(ConfigStore store, HealerEngine engine)
     {
@@ -85,24 +87,44 @@ public sealed class MainViewModel : ObservableObject
         set
         {
             if (!SetProperty(ref _elevatedMode, value)) return;
-
-            bool succeeded = value ? ElevationService.Enable() : ElevationService.Disable();
-
-            if (!succeeded)
-            {
-                _elevatedMode = !value;
-                OnPropertyChanged(nameof(ElevatedMode));
-                StatusText = value
-                    ? LocalizationService.Get("StrElevationEnableFailed")
-                    : LocalizationService.Get("StrElevationDisableFailed");
-                return;
-            }
-
-            StatusText = value
-                ? LocalizationService.Get("StrElevationEnabled")
-                : LocalizationService.Get("StrElevationDisabled");
-            ScheduleSave();
+            _ = ApplyElevatedModeAsync(value);
         }
+    }
+
+    /// <summary>
+    /// 提权操作会弹出 UAC 并等待用户确认，必须放到后台线程，不能阻塞 UI。
+    /// </summary>
+    private async Task ApplyElevatedModeAsync(bool enable)
+    {
+        int request = ++_elevationRequest;
+        StatusText = LocalizationService.Get("StrElevationApplying");
+
+        bool succeeded;
+        try
+        {
+            succeeded = await Task.Run(() => enable ? ElevationService.Enable() : ElevationService.Disable());
+        }
+        catch (Exception)
+        {
+            succeeded = false;
+        }
+
+        if (request != _elevationRequest || _disposed) return;
+
+        if (!succeeded)
+        {
+            _elevatedMode = !enable;
+            OnPropertyChanged(nameof(ElevatedMode));
+            StatusText = enable
+                ? LocalizationService.Get("StrElevationEnableFailed")
+                : LocalizationService.Get("StrElevationDisableFailed");
+            return;
+        }
+
+        StatusText = enable
+            ? LocalizationService.Get("StrElevationEnabled")
+            : LocalizationService.Get("StrElevationDisabled");
+        ScheduleSave();
     }
 
     public AppThemeMode Theme
@@ -179,6 +201,8 @@ public sealed class MainViewModel : ObservableObject
 
     public void LoadFromConfig(AppConfig config)
     {
+        _elevationRequest++;
+
         if (_isRecording)
         {
             _recorder.Stop();
@@ -247,7 +271,7 @@ public sealed class MainViewModel : ObservableObject
 
         KeyRule rule = kind == InputKind.Mouse
             ? KeyRule.Mouse(code, 60)
-            : KeyRule.Keyboard(code, 60);
+            : KeyRule.Keyboard(code, 0);
 
         var viewModel = new KeyRuleViewModel(rule);
         viewModel.Changed += ScheduleSave;
@@ -290,12 +314,18 @@ public sealed class MainViewModel : ObservableObject
             Targets = Rules.Select(rule => rule.ToModel()).ToList(),
         };
 
-        _store.Save(config);
+        bool saved = _store.Save(config);
         _engine.UpdateRules(_enabled ? config.Targets : []);
+
+        if (!saved)
+            StatusText = LocalizationService.Get("StrSaveFailed");
     }
 
     public void Dispose()
     {
+        if (_disposed) return;
+        _disposed = true;
+
         SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
         _saveTimer.Stop();
         _recorder.Dispose();

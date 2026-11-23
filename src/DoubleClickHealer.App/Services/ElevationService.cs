@@ -29,13 +29,10 @@ public static class ElevationService
                 Arguments = $"/Query /TN \"{TaskName}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
             });
 
             if (process == null) return false;
-            process.WaitForExit(4000);
-            return process.HasExited && process.ExitCode == 0;
+            return WaitForExit(process, 4000) && process.ExitCode == 0;
         }
         catch (Exception)
         {
@@ -64,13 +61,10 @@ public static class ElevationService
                 Arguments = $"/Delete /F /TN \"{TaskName}\"",
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
             });
 
             if (process == null) return false;
-            process.WaitForExit(4000);
-            return process.HasExited && process.ExitCode == 0;
+            return WaitForExit(process, 4000) && process.ExitCode == 0;
         }
         catch (Exception)
         {
@@ -92,13 +86,27 @@ public static class ElevationService
             });
 
             if (process == null) return false;
-            process.WaitForExit(15000);
-            return process.HasExited && process.ExitCode == 0;
+            return WaitForExit(process, 60000) && process.ExitCode == 0;
         }
         catch (Exception)
         {
             // 用户在 UAC 中点了取消。
             return false;
         }
+    }
+
+    private static bool WaitForExit(Process process, int milliseconds)
+    {
+        if (process.WaitForExit(milliseconds)) return true;
+
+        try
+        {
+            process.Kill();
+        }
+        catch (Exception)
+        {
+        }
+
+        return false;
     }
 }

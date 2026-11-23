@@ -28,8 +28,13 @@
     <sys:String x:Key="StrAlreadyInList">{0} is already in the list</sys:String>
     <sys:String x:Key="StrRemoved">Removed {0}</sys:String>
     <sys:String x:Key="StrHookFailed">Global hook failed. Healing is inactive.</sys:String>
+    <sys:String x:Key="StrHookPartialFailed">Some input hooks failed. Mouse or keyboard healing may be inactive.</sys:String>
+    <sys:String x:Key="StrConfigRecovered">Settings were corrupted. A backup was saved and defaults restored.</sys:String>
+    <sys:String x:Key="StrConfigLoadFailed">Could not load settings. Defaults are being used.</sys:String>
+    <sys:String x:Key="StrSaveFailed">Could not save settings. Check disk permissions.</sys:String>
 
     <sys:String x:Key="StrStartupFailed">Could not change the startup setting</sys:String>
+    <sys:String x:Key="StrElevationApplying">Waiting for administrator approval…</sys:String>
     <sys:String x:Key="StrElevationEnableFailed">Could not enable enhanced mode. Administrator approval is required.</sys:String>
     <sys:String x:Key="StrElevationDisableFailed">Could not disable enhanced mode</sys:String>
     <sys:String x:Key="StrElevationEnabled">Enhanced mode enabled. Restart the app to apply.</sys:String>

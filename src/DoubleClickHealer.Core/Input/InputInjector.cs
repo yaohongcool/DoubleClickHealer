@@ -27,6 +27,8 @@ public sealed class InputInjector : IDisposable
     private readonly Thread _worker;
     private volatile bool _disposed;
 
+    private static readonly int InputSize = Marshal.SizeOf<Native.INPUT>();
+
     public InputInjector()
     {
         _worker = new Thread(Run) { IsBackground = true, Name = "DCH.Injector" };
@@ -77,9 +79,10 @@ public sealed class InputInjector : IDisposable
                     OnInjected?.Invoke(work.Target, work.Code, true);
                 }
             }
-            catch (Win32Exception)
+            catch (Exception)
             {
-                // 注入被系统拒绝（例如安全桌面）时跳过，不能让线程退出。
+                // 注入被系统拒绝（安全桌面、UIPI 等）或诊断回调异常时跳过，
+                // 注入线程必须保持存活，否则后续 UP 都无法补发。
             }
         }
     }
@@ -109,7 +112,7 @@ public sealed class InputInjector : IDisposable
 
     private static void Send(Native.INPUT[] inputs)
     {
-        uint sent = Native.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Native.INPUT>());
+        uint sent = Native.SendInput((uint)inputs.Length, inputs, InputSize);
         if (sent == 0)
             throw new Win32Exception(Marshal.GetLastWin32Error());
     }
@@ -174,7 +177,7 @@ public sealed class InputInjector : IDisposable
         if (_disposed) return;
         _disposed = true;
         _queue.CompleteAdding();
-        _worker.Join(1000);
+        _worker.Join();
         _queue.Dispose();
     }
 }

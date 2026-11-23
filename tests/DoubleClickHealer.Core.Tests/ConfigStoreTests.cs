@@ -200,6 +200,98 @@ public sealed class ConfigStoreTests : IDisposable
         Assert.Equal(88, received.Targets[0].HoldMs);
     }
 
+    [Fact]
+    public void NullTargets_FallsBackToDefaults()
+    {
+        File.WriteAllText(_path, """
+            { "version": 3, "targets": null }
+            """);
+
+        using var store = new ConfigStore(_path);
+
+        Assert.Null(store.LastError);
+        Assert.Equal(2, store.Current.Targets.Count);
+        Assert.All(store.Current.Targets, rule => Assert.Equal(60, rule.HoldMs));
+    }
+
+    [Fact]
+    public void NullTargetEntry_IsDropped()
+    {
+        File.WriteAllText(_path, """
+            {
+              "version": 3,
+              "targets": [
+                { "kind": "Mouse", "code": 1, "holdMs": 60 },
+                null
+              ]
+            }
+            """);
+
+        using var store = new ConfigStore(_path);
+
+        Assert.Null(store.LastError);
+        var rule = Assert.Single(store.Current.Targets);
+        Assert.Equal(MouseButtons.Left, rule.Code);
+    }
+
+    [Fact]
+    public void OutOfRangeHoldMs_IsClamped()
+    {
+        File.WriteAllText(_path, """
+            {
+              "version": 3,
+              "targets": [
+                { "kind": "Mouse", "code": 1, "holdMs": 100000 }
+              ]
+            }
+            """);
+
+        using var store = new ConfigStore(_path);
+
+        Assert.Equal(120, Assert.Single(store.Current.Targets).HoldMs);
+    }
+
+    [Fact]
+    public void CorruptFile_IsBackedUpAndDefaultWritten()
+    {
+        File.WriteAllText(_path, "{ this is not json");
+
+        using var store = new ConfigStore(_path);
+
+        Assert.NotNull(store.LastError);
+        Assert.True(store.RecoveredFromCorruptFile);
+        Assert.True(File.Exists(_path));
+        Assert.NotEmpty(Directory.GetFiles(_directory, "config.json.bad-*"));
+    }
+
+    [Fact]
+    public void Save_ReturnsTrueAndClearsError()
+    {
+        using var store = new ConfigStore(_path);
+
+        Assert.True(store.Save(store.Current));
+        Assert.Null(store.LastError);
+    }
+
+    [Fact]
+    public void Watcher_NullTargets_ReloadsWithoutCrash()
+    {
+        using var store = new ConfigStore(_path);
+        store.EnsureFile();
+        store.StartWatching();
+
+        using var signal = new ManualResetEventSlim(false);
+        store.Changed += _ => signal.Set();
+
+        File.WriteAllText(_path, """
+            { "version": 3, "targets": null }
+            """);
+
+        Assert.True(signal.Wait(TimeSpan.FromSeconds(3)), "配置变更未被监听到");
+        Assert.Equal(2, store.Current.Targets.Count);
+        Assert.Null(store.LastError);
+    }
+
     public void Dispose()
     {
         try

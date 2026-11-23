@@ -123,4 +123,55 @@ public class DebounceStateTests
         Assert.Equal(InputVerdict.Swallow, state.OnDown(T(10)).Verdict);
         Assert.Equal(InputVerdict.Swallow, state.OnUp(T(200)).Verdict);
     }
+
+    [Fact]
+    public void UnpairedUp_PassesThrough()
+    {
+        // 启动时按键已经被按住、钩子重装丢事件等场景：状态机没见过 DOWN。
+        // 此时必须放行 UP，否则系统会一直认为按键处于按下状态。
+        var state = Mouse(40);
+
+        Assert.Equal(InputVerdict.PassThrough, state.OnUp(T(10)).Verdict);
+        Assert.False(state.HasPendingRelease);
+    }
+
+    [Fact]
+    public void UnpairedUp_InLightMode_PassesThrough()
+    {
+        var state = Keyboard(0);
+
+        Assert.Equal(InputVerdict.PassThrough, state.OnUp(T(10)).Verdict);
+    }
+
+    [Fact]
+    public void AdoptRuntimeState_KeepsHeldPress()
+    {
+        // 按住鼠标时修改阈值：新规则必须继承 _isDown，松手后仍按新阈值扣留。
+        var previous = Mouse(40);
+        Assert.Equal(InputVerdict.PassThrough, previous.OnDown(T(0)).Verdict);
+
+        var replacement = new DebounceState(KeyRule.Mouse(MouseButtons.Left, 80));
+        replacement.AdoptRuntimeState(previous);
+
+        var up = replacement.OnUp(T(100));
+        Assert.Equal(InputVerdict.Swallow, up.Verdict);
+        Assert.True(replacement.HasPendingRelease);
+        Assert.True(replacement.TryTakeRelease(T(180)));
+    }
+
+    [Fact]
+    public void AdoptRuntimeState_DropsPendingRelease()
+    {
+        // 已扣留的 UP 由 HealerEngine 立即补发，新状态不能重复持有。
+        var previous = Mouse(40);
+        previous.OnDown(T(0));
+        previous.OnUp(T(20));
+        Assert.True(previous.HasPendingRelease);
+
+        var replacement = new DebounceState(KeyRule.Mouse(MouseButtons.Left, 60));
+        replacement.AdoptRuntimeState(previous);
+
+        Assert.False(replacement.HasPendingRelease);
+        Assert.Equal(InputVerdict.PassThrough, replacement.OnUp(T(100)).Verdict);
+    }
 }

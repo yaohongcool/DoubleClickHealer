@@ -25,7 +25,7 @@ Windows 托盘小工具，后台常驻，支持**鼠标**和**键盘**，每个�
 
 ## 下载与安装
 
-从 [Releases](https://github.com/yaohongcool/DoubleClickHealer/releases) 下载 `DoubleClickHealer.exe`，放到任意目录双击运行即可，免安装。
+从 [Releases](https://github.com/yaohongcool/DoubleClickHealer/releases) 下载 `DoubleClickHealer_xx.exe`，放到任意目录双击运行即可，免安装。
 
 配置和日志位置：
 
@@ -42,6 +42,7 @@ Windows 托盘小工具，后台常驻，支持**鼠标**和**键盘**，每个�
 默认以普通权限运行，可修复大多数程序。以管理员权限运行的窗口（例如任务管理器、部分安装器）需要开启「增强模式」：
 
 - 开启时请求一次 UAC，并创建登录计划任务，之后每次登录以管理员权限启动
+- 升级到新文件名后，如已开启增强模式，请关闭再重新开启一次，以更新计划任务中的程序路径
 
 ## 常见问题
 

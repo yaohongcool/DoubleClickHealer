@@ -25,7 +25,7 @@ A Windows tray utility that runs in the background, supporting both **mouse** an
 
 ## Download and install
 
-Download `DoubleClickHealer.exe` from [Releases](https://github.com/yaohongcool/DoubleClickHealer/releases) and run it from any folder. No installation is needed.
+Download `DoubleClickHealer_xx.exe` from [Releases](https://github.com/yaohongcool/DoubleClickHealer/releases) and run it from any folder. No installation is needed.
 
 Settings and logs:
 
@@ -42,6 +42,7 @@ Settings and logs:
 The app runs with normal privileges by default and fixes most applications. Windows that run as administrator (Task Manager, some installers, etc.) require enhanced mode:
 
 - Enabling it requests UAC once and creates a logon scheduled task, so the app starts elevated on future sign-ins
+- After upgrading to a new file name, toggle enhanced mode off and on again so the scheduled task points to the new path
 
 ## FAQ
 

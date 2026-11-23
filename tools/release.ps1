@@ -75,18 +75,18 @@ if (-not $SkipTests) {
 }
 
 Write-Host '发布单文件...'
-& (Join-Path $PSScriptRoot 'publish.ps1')
+& (Join-Path $PSScriptRoot 'publish.ps1') -Version $Version
 if ($LASTEXITCODE -ne 0) {
     throw '发布失败'
 }
 
-$exe = Join-Path $root 'artifacts\publish\DoubleClickHealer.exe'
+$exe = Join-Path $root "artifacts\publish\DoubleClickHealer_$tag.exe"
 if (-not (Test-Path $exe)) {
     throw "找不到发布产物: $exe"
 }
 
-$zip = Join-Path $root "artifacts\DoubleClickHealer-$tag-win-x64.zip"
-$checksum = Join-Path $root "artifacts\DoubleClickHealer-$tag-win-x64.sha256"
+$zip = Join-Path $root "artifacts\DoubleClickHealer_$tag-win-x64.zip"
+$checksum = Join-Path $root "artifacts\DoubleClickHealer_$tag-win-x64.sha256"
 
 if (Test-Path $zip) {
     Remove-Item $zip -Force
@@ -97,7 +97,7 @@ Compress-Archive -Path $exe -DestinationPath $zip -CompressionLevel Optimal
 $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
 [System.IO.File]::WriteAllText(
     $checksum,
-    "$hash  DoubleClickHealer.exe`r`n",
+    "$hash  DoubleClickHealer_$tag.exe`r`n",
     (New-Object System.Text.ASCIIEncoding))
 
 $sizeMb = (Get-Item $exe).Length / 1MB

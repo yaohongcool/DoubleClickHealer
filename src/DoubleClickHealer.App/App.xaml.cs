@@ -31,7 +31,10 @@ public partial class App : Application
         _singleInstance = new SingleInstance();
         if (!_singleInstance.IsFirstInstance)
         {
-            SingleInstance.SignalExisting();
+            // 开机时的第二个启动项（Run 键和计划任务同时存在）不应把主窗口叫出来。
+            if (!e.Args.Contains("--minimized"))
+                SingleInstance.SignalExisting();
+
             Shutdown();
             return;
         }
@@ -42,6 +45,21 @@ public partial class App : Application
         _store.EnsureFile();
         _store.Save(_store.Current); // 迁移后的配置立即落盘
         _store.StartWatching();
+
+        // 旧版本可能残留提权任务，导致登录时 Run 键和计划任务同时拉起应用。
+        // 增强模式关闭时清理，避免双启动和意外的提权运行。
+        bool elevatedMode = _store.Current.ElevatedMode;
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                if (!elevatedMode && ElevationService.IsTaskInstalled())
+                    ElevationService.Disable();
+            }
+            catch
+            {
+            }
+        });
 
         LocalizationService.Initialize(_store.Current.Language);
 

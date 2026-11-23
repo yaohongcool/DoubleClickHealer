@@ -271,7 +271,7 @@ public sealed class MainViewModel : ObservableObject
 
         KeyRule rule = kind == InputKind.Mouse
             ? KeyRule.Mouse(code, 60)
-            : KeyRule.Keyboard(code, 0);
+            : KeyRule.Keyboard(code, 60);
 
         var viewModel = new KeyRuleViewModel(rule);
         viewModel.Changed += ScheduleSave;
